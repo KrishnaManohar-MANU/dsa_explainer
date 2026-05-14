@@ -14,6 +14,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    
     const apiResponse = await fetch("openrouter.ai", {
       method: "POST",
       headers: {
@@ -21,7 +22,7 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "meta-llama/llama-3.3-70b-instruct:free",
+        model = "openrouter/auto",
         response_format: { type: "json_object" },
         messages: [
           {
@@ -41,9 +42,8 @@ export default async function handler(req, res) {
     }
 
     const completion = await apiResponse.json();
-    let resultText = completion.choices[0].message.content.trim();
+    let resultText = completion.choices.message.content.trim();
     
-    // CRASH PROTECTION: Strips out any accidental ```json block wrappers if the model includes them
     if (resultText.startsWith("```")) {
       resultText = resultText.replace(/^```json/, "").replace(/^```/, "").replace(/```$/, "").trim();
     }
