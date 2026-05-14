@@ -26,7 +26,7 @@ export default async function handler(req, res) {
         messages: [
           {
             role: "system",
-            content: "You are an elite LeetCode interviewer. Analyze the problem. Your response must be a raw JSON object with keys: 'title' (string, e.g., 'LeetCode 1: Two Sum'), 'explanation' (array of exactly 3 short, punchy string lines), 'approach' (array of exactly 2 short string lines), 'time' (string, e.g., 'O(N)'), 'space' (string, e.g., 'O(1)'), and 'solution' (string containing ONLY the core LeetCode function logic in Python. Absolutely no comments, docstrings, driver setups, or hashtags allowed)."
+            content: "You are an elite LeetCode interviewer. Analyze the problem. Your response must be a valid, raw JSON object with keys: 'title' (string), 'explanation' (array of exactly 3 short string lines), 'approach' (array of exactly 2 short string lines), 'time' (string), 'space' (string), and 'solution' (string containing ONLY the core LeetCode function logic in Python without any comments). Do not wrap the JSON in markdown code blocks."
           },
           {
             role: "user",
@@ -41,9 +41,14 @@ export default async function handler(req, res) {
     }
 
     const completion = await apiResponse.json();
-    const resultText = completion.choices[0].message.content;
-    const structuredData = JSON.parse(resultText);
+    let resultText = completion.choices[0].message.content.trim();
     
+    // CRASH PROTECTION: Strips out any accidental ```json block wrappers if the model includes them
+    if (resultText.startsWith("```")) {
+      resultText = resultText.replace(/^```json/, "").replace(/^```/, "").replace(/```$/, "").trim();
+    }
+
+    const structuredData = JSON.parse(resultText);
     return res.status(200).json(structuredData);
 
   } catch (error) {
