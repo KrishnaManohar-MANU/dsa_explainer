@@ -23,22 +23,20 @@ Respond ONLY with a valid JSON object (no markdown, no backticks, no extra text)
 }`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
+        'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
+        model : "openrouter/auto",
         messages: [{ role: 'user', content: prompt }]
       })
     });
 
     const data = await response.json();
-    const text = data.content.map(i => i.text || '').join('');
+    const text = data.choices[0].message.content;
     const clean = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
 
