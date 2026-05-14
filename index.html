@@ -78,13 +78,16 @@
     <h1>Logic over <span>Boilerplate</span></h1>
   </header>
 
-  <div class="input-panel">
-    <textarea id="rawInput" placeholder="Paste your LeetCode tracking descriptions here..."></textarea>
-    <div class="controls">
-      <button class="btn btn-prime" id="actionBtn" onclick="processProblem()">Deconstruct Core Logic</button>
-      <button class="btn btn-sec" onclick="clearWorkspace()">Clear</button>
-    </div>
-  </div>
+  
+  <div class="results-panel" id="viewGroup">
+    
+    
+    <div id="titleTarget" style="font-size: 24px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; margin-bottom: 0.5rem; padding-left: 4px;"></div>
+    
+    <div class="ui-card">
+      <div class="ui-card-title">PLAIN ENGLISH TRANSLATION</div>
+      ...
+
 
   <div class="error" id="errContainer"></div>
 
@@ -110,16 +113,15 @@
       </div>
     </div>
 
-    <div class="ui-card">
-      <div class="ui-card-title">LEETCODE FUNCTION LOGIC ONLY</div>
-      <div class="code-viewer">
-        <div class="code-header">
-          <span class="code-lang">JavaScript Core</span>
-          <button class="copy-btn" id="copyBtn" onclick="copyCode()">Copy Logic</button>
-        </div>
-        <pre><code id="codeTarget"></code></pre>
+   
+    <div class="code-viewer">
+      <div class="code-header">
+        <span class="code-lang">Python Core</span> <!-- Updated from JavaScript Core -->
+        <button class="copy-btn" id="copyBtn" onclick="copyCode()">Copy Logic</button>
       </div>
+      <pre><code id="codeTarget"></code></pre>
     </div>
+
   </div>
 </div>
 
@@ -130,17 +132,18 @@
     return `<div class="skeleton-stack">${Array(count).fill('<div class="skeleton"></div>').join('')}</div>`;
   }
 
-  // Safely converts both arrays and single strings into clean HTML bullet points
+  
   function formatAsBullets(data) {
     if (!data) return "<li>N/A</li>";
     if (Array.isArray(data)) {
       return data.map(item => `<li>${item}</li>`).join('');
     }
-    // If it's a single string, break it by newlines or sentences if needed
+    
     return `<li>${data.replace(/^-\s*/, '')}</li>`;
   }
 
   async function processProblem() {
+    document.getElementById('titleTarget').innerHTML = ""; 
     const rawText = document.getElementById('rawInput').value.trim();
     const errBox = document.getElementById('errContainer');
     const viewGroup = document.getElementById('viewGroup');
@@ -170,10 +173,12 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ problem: rawText })
+        
       });
 
       if (!apiResponse.ok) throw new Error("Server communication fault");
       const payload = await apiResponse.json();
+      document.getElementById('titleTarget').textContent = payload.title || "LeetCode Problem Extraction";
 
       // Crash prevention: dynamically handles array formats or string formats
       document.getElementById('expTarget').innerHTML = formatAsBullets(payload.explanation || payload.explanationContent);
@@ -186,6 +191,7 @@
       // Handles core code extraction
       targetedCodeText = payload.solution || payload.code || "// Code not extracted cleanly";
       document.getElementById('codeTarget').textContent = targetedCodeText;
+
 
     } catch (err) {
       console.error(err); // Check your browser console (F12) for the exact script crash details

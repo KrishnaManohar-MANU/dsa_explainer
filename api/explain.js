@@ -9,18 +9,18 @@ export default async function handler(req, res) {
   const { problem } = req.body;
   if (!problem) return res.status(400).json({ error: 'No problem provided' });
 
-  const prompt = `You are a DSA tutor helping a beginner understand a coding problem. Given this problem: You are an elite LeetCode interviewer. Analyze the problem.
+  
+messages: [
+  {
+    role: "system",
+    content: "You are an elite LeetCode interviewer. Analyze the problem. Your response must be a raw JSON object with keys: 'title' (string, e.g., 'LeetCode 1: Two Sum' or 'Problem: Reverse Integer'), 'explanation' (array of exactly 3 short string lines), 'approach' (array of exactly 2 short string lines), 'time' (string), 'space' (string), and 'solution' (string containing ONLY the core LeetCode function logic in Python without any comments)."
+  },
+  {
+    role: "user",
+    content: problem
+  }
+]
 
-"${problem}"
-
-Respond ONLY with a valid JSON object (no markdown, no backticks, no extra text) with exactly these keys:
-{
-  "explanation": "Plain English explanation of what the problem is asking (2-3 sentences, very simple language, no jargon array of exactly 3 short, punchy, actionable bullet points",
-  "hint": "A helpful hint or approach WITHOUT giving the full solution. Mention the data structure or algorithm pattern to use and why. array of exactly 2 short strategic clues",
-  "time_complexity": "Best time complexity like O(n) with a one-line reason short Big-O",
-  "space_complexity": "Space complexity like O(1) with a one-line reason short Big-O",
-  "solution": "string containing ONLY the core LeetCode function logic, properly commented, without any driver or class boilerplate code"
-}`;
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
