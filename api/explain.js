@@ -30,7 +30,7 @@ Respond ONLY with a valid JSON object (no markdown, no backticks, no extra text)
         'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY
       },
       body: JSON.stringify({
-        model = "openrouter/auto",
+        model : "openrouter/auto",
         messages: [{ role: 'user', content: prompt }]
       })
     });
