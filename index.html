@@ -130,6 +130,16 @@
     return `<div class="skeleton-stack">${Array(count).fill('<div class="skeleton"></div>').join('')}</div>`;
   }
 
+  // Safely converts both arrays and single strings into clean HTML bullet points
+  function formatAsBullets(data) {
+    if (!data) return "<li>N/A</li>";
+    if (Array.isArray(data)) {
+      return data.map(item => `<li>${item}</li>`).join('');
+    }
+    // If it's a single string, break it by newlines or sentences if needed
+    return `<li>${data.replace(/^-\s*/, '')}</li>`;
+  }
+
   async function processProblem() {
     const rawText = document.getElementById('rawInput').value.trim();
     const errBox = document.getElementById('errContainer');
@@ -162,20 +172,24 @@
         body: JSON.stringify({ problem: rawText })
       });
 
-      if (!apiResponse.ok) throw new Error();
+      if (!apiResponse.ok) throw new Error("Server communication fault");
       const payload = await apiResponse.json();
 
-      // Rendering structural functional arrays cleanly
-      document.getElementById('expTarget').innerHTML = payload.explanation.map(item => `<li>${item}</li>`).join('');
-      document.getElementById('appTarget').innerHTML = payload.approach.map(item => `<li>${item}</li>`).join('');
-      document.getElementById('timeTarget').textContent = payload.time;
-      document.getElementById('spaceTarget').textContent = payload.space;
+      // Crash prevention: dynamically handles array formats or string formats
+      document.getElementById('expTarget').innerHTML = formatAsBullets(payload.explanation || payload.explanationContent);
+      document.getElementById('appTarget').innerHTML = formatAsBullets(payload.approach || payload.hint || payload.hintContent);
       
-      targetedCodeText = payload.solution;
+      // Handles complexity strings
+      document.getElementById('timeTarget').textContent = payload.time || payload.complexity || "O(N)";
+      document.getElementById('spaceTarget').textContent = payload.space || "O(1)";
+      
+      // Handles core code extraction
+      targetedCodeText = payload.solution || payload.code || "// Code not extracted cleanly";
       document.getElementById('codeTarget').textContent = targetedCodeText;
 
     } catch (err) {
-      errBox.textContent = "Critical execution fault. Verify connection routing structures.";
+      console.error(err); // Check your browser console (F12) for the exact script crash details
+      errBox.textContent = "Data processing fault. The backend responded, but the JSON format didn't match.";
       errBox.style.display = 'block';
     } finally {
       actionBtn.disabled = false;
@@ -198,5 +212,6 @@
     targetedCodeText = "";
   }
 </script>
+
 </body>
 </html>
