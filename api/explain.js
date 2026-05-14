@@ -22,7 +22,7 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model = "openrouter/auto",
+        model : "openrouter/auto",
         response_format: { type: "json_object" },
         messages: [
           {
