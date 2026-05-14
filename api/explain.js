@@ -9,17 +9,17 @@ export default async function handler(req, res) {
   const { problem } = req.body;
   if (!problem) return res.status(400).json({ error: 'No problem provided' });
 
-  const prompt = `You are a DSA tutor helping a beginner understand a coding problem. Given this problem:
+  const prompt = `You are a DSA tutor helping a beginner understand a coding problem. Given this problem: You are an elite LeetCode interviewer. Analyze the problem.
 
 "${problem}"
 
 Respond ONLY with a valid JSON object (no markdown, no backticks, no extra text) with exactly these keys:
 {
-  "explanation": "Plain English explanation of what the problem is asking (2-4 sentences, very simple language, no jargon)",
-  "hint": "A helpful hint or approach WITHOUT giving the full solution. Mention the data structure or algorithm pattern to use and why.",
-  "time_complexity": "Best time complexity like O(n) with a one-line reason",
-  "space_complexity": "Space complexity like O(1) with a one-line reason",
-  "solution": "A clean Python solution with inline comments explaining every step"
+  "explanation": "Plain English explanation of what the problem is asking (2-3 sentences, very simple language, no jargon array of exactly 3 short, punchy, actionable bullet points",
+  "hint": "A helpful hint or approach WITHOUT giving the full solution. Mention the data structure or algorithm pattern to use and why. array of exactly 2 short strategic clues",
+  "time_complexity": "Best time complexity like O(n) with a one-line reason short Big-O",
+  "space_complexity": "Space complexity like O(1) with a one-line reason short Big-O",
+  "solution": "string containing ONLY the core LeetCode function logic, properly commented, without any driver or class boilerplate code"
 }`;
 
   try {
