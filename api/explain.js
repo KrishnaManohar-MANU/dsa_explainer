@@ -1,47 +1,53 @@
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
 
   const { problem } = req.body;
-  if (!problem) return res.status(400).json({ error: 'No problem provided' });
-
-  
-messages: [
-  {
-    role: "system",
-    content: "You are an elite LeetCode interviewer. Analyze the problem. Your response must be a raw JSON object with keys: 'title' (string, e.g., 'LeetCode 1: Two Sum' or 'Problem: Reverse Integer'), 'explanation' (array of exactly 3 short string lines), 'approach' (array of exactly 2 short string lines), 'time' (string), 'space' (string), and 'solution' (string containing ONLY the core LeetCode function logic in Python without any comments)."
-  },
-  {
-    role: "user",
-    content: problem
+  if (!problem) {
+    return res.status(400).json({ error: 'Problem content is required' });
   }
-]
 
+  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  if (!openRouterKey) {
+    return res.status(500).json({ error: 'System Error: API Key missing from Vercel dashboard.' });
+  }
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
+    const apiResponse = await fetch("openrouter.ai", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY
+        "Authorization": `Bearer ${openRouterKey}`,
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model : "openrouter/auto",
-        messages: [{ role: 'user', content: prompt }]
+        model: "meta-llama/llama-3.3-70b-instruct:free",
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: "You are an elite LeetCode interviewer. Analyze the problem. Your response must be a raw JSON object with keys: 'title' (string, e.g., 'LeetCode 1: Two Sum'), 'explanation' (array of exactly 3 short, punchy string lines), 'approach' (array of exactly 2 short string lines), 'time' (string, e.g., 'O(N)'), 'space' (string, e.g., 'O(1)'), and 'solution' (string containing ONLY the core LeetCode function logic in Python. Absolutely no comments, docstrings, driver setups, or hashtags allowed)."
+          },
+          {
+            role: "user",
+            content: problem
+          }
+        ]
       })
     });
 
-    const data = await response.json();
-    const text = data.choices[0].message.content;
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
+    if (!apiResponse.ok) {
+      throw new Error(`OpenRouter returned status ${apiResponse.status}`);
+    }
 
-    return res.status(200).json(parsed);
-  } catch (err) {
-    return res.status(500).json({ error: 'Something went wrong. Try again!' });
+    const completion = await apiResponse.json();
+    const resultText = completion.choices[0].message.content;
+    const structuredData = JSON.parse(resultText);
+    
+    return res.status(200).json(structuredData);
+
+  } catch (error) {
+    console.error("Backend runtime crash error:", error);
+    return res.status(500).json({ error: "Internal API data processing fault" });
   }
 }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>DSA Explainer // Core Logic</title>
+<title>DSA Explainer // Core Python Logic</title>
 <link href="googleapis.com" rel="stylesheet" />
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,12 +39,13 @@
   
   .results-panel { display: none; flex-direction: column; gap: 16px; }
   
-  /* React-style component cards */
+  /* Large Title Display Styling */
+  .problem-heading { font-size: 24px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; margin-top: 0.5rem; padding-left: 4px; border-left: 4px solid var(--accent-light); padding-left: 12px; }
+
   .ui-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; position: relative; }
   .ui-card-title { font-size: 11px; font-family: var(--mono); font-weight: 700; color: var(--muted); letter-spacing: 0.1em; margin-bottom: 1rem; display: flex; align-items: center; gap: 6px; }
   .ui-card-title::before { content: ''; width: 6px; height: 6px; background: var(--accent-light); border-radius: 50%; }
   
-  /* Component Specific Layouts */
   .metrics { display: flex; gap: 16px; }
   .metric-box { flex: 1; background: var(--surface2); border-radius: 12px; padding: 1rem; border: 1px solid var(--border); }
   .metric-label { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
@@ -54,7 +55,6 @@
   .bullet-list li { position: relative; padding-left: 20px; font-size: 14px; color: #d1d1d6; line-height: 1.6; }
   .bullet-list li::before { content: "→"; position: absolute; left: 0; color: var(--accent-light); font-family: var(--mono); }
   
-  /* Code Viewer Component */
   .code-viewer { background: #060609; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; margin-top: 0.5rem; }
   .code-header { background: #0c0c12; padding: 8px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
   .code-lang { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; }
@@ -62,9 +62,8 @@
   .copy-btn:hover { color: #fff; border-color: var(--border-hover); }
   .copy-btn.copied { color: var(--success); border-color: var(--success); }
   pre { padding: 1rem; overflow-x: auto; margin: 0; }
-  code { font-family: var(--mono); font-size: 13px; color: #e5e5ea; line-height: 1.6; }
+  code { font-family: var(--mono); font-size: 13px; color: #e5e5ea; line-height: 1.6; white-space: pre-wrap; }
 
-  /* Loading Architecture */
   .skeleton-stack { display: flex; flex-direction: column; gap: 8px; width: 100%; }
   .skeleton { height: 14px; background: linear-gradient(90deg, var(--surface2) 25%, #222230 50%, var(--surface2) 75%); background-size: 200% 100%; animation: loadingShift 1.4s infinite; border-radius: 4px; }
   @keyframes loadingShift { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
@@ -74,24 +73,24 @@
 <div class="noise"></div>
 <div class="wrapper">
   <header>
-    <span class="tag">// System Engine Active</span>
+    <span class="tag">// Interactive Compiler Deconstruct</span>
     <h1>Logic over <span>Boilerplate</span></h1>
   </header>
 
-  
-  <div class="results-panel" id="viewGroup">
-    
-    
-    <div id="titleTarget" style="font-size: 24px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; margin-bottom: 0.5rem; padding-left: 4px;"></div>
-    
-    <div class="ui-card">
-      <div class="ui-card-title">PLAIN ENGLISH TRANSLATION</div>
-      ...
-
+  <div class="input-panel">
+    <textarea id="rawInput" placeholder="Paste your LeetCode problem description here..."></textarea>
+    <div class="controls">
+      <button class="btn btn-prime" id="actionBtn" onclick="processProblem()">Deconstruct Core Logic</button>
+      <button class="btn btn-sec" onclick="clearWorkspace()">Clear</button>
+    </div>
+  </div>
 
   <div class="error" id="errContainer"></div>
 
   <div class="results-panel" id="viewGroup">
+    <!-- Large Title Display Component -->
+    <div class="problem-heading" id="titleTarget"></div>
+
     <div class="ui-card">
       <div class="ui-card-title">PLAIN ENGLISH TRANSLATION</div>
       <ul class="bullet-list" id="expTarget"></ul>
@@ -113,15 +112,16 @@
       </div>
     </div>
 
-   
-    <div class="code-viewer">
-      <div class="code-header">
-        <span class="code-lang">Python Core</span> <!-- Updated from JavaScript Core -->
-        <button class="copy-btn" id="copyBtn" onclick="copyCode()">Copy Logic</button>
+    <div class="ui-card">
+      <div class="ui-card-title">LEETCODE CORE FUNCTION ONLY</div>
+      <div class="code-viewer">
+        <div class="code-header">
+          <span class="code-lang">Python 3 Core</span>
+          <button class="copy-btn" id="copyBtn" onclick="copyCode()">Copy Logic</button>
+        </div>
+        <pre><code id="codeTarget"></code></pre>
       </div>
-      <pre><code id="codeTarget"></code></pre>
     </div>
-
   </div>
 </div>
 
@@ -132,18 +132,15 @@
     return `<div class="skeleton-stack">${Array(count).fill('<div class="skeleton"></div>').join('')}</div>`;
   }
 
-  
   function formatAsBullets(data) {
     if (!data) return "<li>N/A</li>";
     if (Array.isArray(data)) {
       return data.map(item => `<li>${item}</li>`).join('');
     }
-    
-    return `<li>${data.replace(/^-\s*/, '')}</li>`;
+    return `<li>${data.toString().replace(/^-\s*/, '')}</li>`;
   }
 
   async function processProblem() {
-    document.getElementById('titleTarget').innerHTML = ""; 
     const rawText = document.getElementById('rawInput').value.trim();
     const errBox = document.getElementById('errContainer');
     const viewGroup = document.getElementById('viewGroup');
@@ -151,17 +148,18 @@
 
     errBox.style.display = 'none';
     if (!rawText) {
-      errBox.textContent = "Error: Input buffer empty. Paste problem setup parameters.";
+      errBox.textContent = "Error: Input box empty. Please copy and paste a problem description.";
       errBox.style.display = 'block';
       return;
     }
 
     viewGroup.style.display = 'flex';
+    document.getElementById('titleTarget').textContent = "Analyzing LeetCode Matrix...";
     document.getElementById('expTarget').innerHTML = getSkeleton(3);
     document.getElementById('appTarget').innerHTML = getSkeleton(2);
-    document.getElementById('timeTarget').innerHTML = "Calculating...";
-    document.getElementById('spaceTarget').innerHTML = "Calculating...";
-    document.getElementById('codeTarget').textContent = "// Fetching solution matrix...";
+    document.getElementById('timeTarget').innerHTML = "...";
+    document.getElementById('spaceTarget').innerHTML = "...";
+    document.getElementById('codeTarget').textContent = "# Executing token tracking maps...";
     
     actionBtn.disabled = true;
     const copyBtn = document.getElementById('copyBtn');
@@ -173,29 +171,22 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ problem: rawText })
-        
       });
 
-      if (!apiResponse.ok) throw new Error("Server communication fault");
+      if (!apiResponse.ok) throw new Error("Server returned an bad response code.");
       const payload = await apiResponse.json();
-      document.getElementById('titleTarget').textContent = payload.title || "LeetCode Problem Extraction";
 
-      // Crash prevention: dynamically handles array formats or string formats
-      document.getElementById('expTarget').innerHTML = formatAsBullets(payload.explanation || payload.explanationContent);
-      document.getElementById('appTarget').innerHTML = formatAsBullets(payload.approach || payload.hint || payload.hintContent);
-      
-      // Handles complexity strings
-      document.getElementById('timeTarget').textContent = payload.time || payload.complexity || "O(N)";
+      document.getElementById('titleTarget').textContent = payload.title || "LeetCode Problem Extraction";
+      document.getElementById('expTarget').innerHTML = formatAsBullets(payload.explanation);
+      document.getElementById('appTarget').innerHTML = formatAsBullets(payload.approach);
+      document.getElementById('timeTarget').textContent = payload.time || "O(N)";
       document.getElementById('spaceTarget').textContent = payload.space || "O(1)";
       
-      // Handles core code extraction
-      targetedCodeText = payload.solution || payload.code || "// Code not extracted cleanly";
+      targetedCodeText = payload.solution || "# No code logic returned.";
       document.getElementById('codeTarget').textContent = targetedCodeText;
 
-
     } catch (err) {
-      console.error(err); // Check your browser console (F12) for the exact script crash details
-      errBox.textContent = "Data processing fault. The backend responded, but the JSON format didn't match.";
+      errBox.textContent = "Execution Error: The backend responded but data mapping fields broke. Try another prompt.";
       errBox.style.display = 'block';
     } finally {
       actionBtn.disabled = false;
@@ -218,6 +209,5 @@
     targetedCodeText = "";
   }
 </script>
-
 </body>
 </html>
