@@ -13,6 +13,8 @@ body{background:#f5f2eb;font-family:'Georgia',serif;min-height:100vh;padding:2re
 input,textarea,button{font-family:inherit}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+/* NEW: smooth popup animation */
+@keyframes modalIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
 </style>
 </head>
 <body>
@@ -21,323 +23,439 @@ input,textarea,button{font-family:inherit}
 const {useState, useRef} = React;
 
 const C = {
-  bg:'#f5f2eb', paper:'#fffef9', ink:'#1a1a18', muted:'#5a5a52',
-  accent:'#c84b2f', accentBg:'#f7eeeb', border:'#d4d0c4',
-  success:'#2d6a4f', info:'#1a4a7a', infoBg:'#e8f0fa',
-  mono:"'Courier New', monospace",
+bg:'#f5f2eb', paper:'#fffef9', ink:'#1a1a18', muted:'#5a5a52',
+accent:'#c84b2f', accentBg:'#f7eeeb', border:'#d4d0c4',
+success:'#2d6a4f', info:'#1a4a7a', infoBg:'#e8f0fa',
+mono:"'Courier New', monospace",
 };
 
 const DIFF = {
-  easy:  {color:'#2d6a4f', bg:'#eaf4ee'},
-  medium:{color:'#8a6200', bg:'#fdf6e3'},
-  hard:  {color:'#c84b2f', bg:'#f7eeeb'},
+easy: {color:'#2d6a4f', bg:'#eaf4ee'},
+medium:{color:'#8a6200', bg:'#fdf6e3'},
+hard: {color:'#c84b2f', bg:'#f7eeeb'},
 };
 
-// ── tiny components ──────────────────────────────────────────────
+// ── NEW: guest attempt helpers ────────────────────────────────────
+// Think of localStorage like a notebook in the user's browser.
+// We write how many times they've used the app, and read it back next time.
 
+// READ: open the notebook and check the number
+function getAttempts(){
+  return parseInt(localStorage.getItem('dsa_attempts') || '0');
+  // if nothing is written yet, treat it as 0
+}
+
+// WRITE: after a successful use, add 1 to the count
+function saveAttempt(){
+  localStorage.setItem('dsa_attempts', getAttempts() + 1);
+}
+// ─────────────────────────────────────────────────────────────────
+
+// ── tiny components ──────────────────────────────────────────────
 function Skeleton({lines=[90,70,80]}){
-  return <div style={{display:'flex',flexDirection:'column',gap:8}}>
-    {lines.map((w,i)=><div key={i} style={{height:12,width:`${w}%`,borderRadius:2,
-      background:'linear-gradient(90deg,#e8e4d4 25%,#f0ece0 50%,#e8e4d4 75%)',
-      backgroundSize:'200% 100%',animation:'shimmer 1.4s infinite'}}/>)}
-  </div>
+return <div style={{display:'flex',flexDirection:'column',gap:8}}>
+  {lines.map((w,i)=><div key={i} style={{height:12,width:`${w}%`,borderRadius:2,
+    background:'linear-gradient(90deg,#e8e4d4 25%,#f0ece0 50%,#e8e4d4 75%)',
+    backgroundSize:'200% 100%',animation:'shimmer 1.4s infinite'}}/>)}
+</div>
 }
 
 function Label({text}){
-  return <div style={{fontSize:10,fontFamily:C.mono,color:C.muted,letterSpacing:'0.12em',
-    textTransform:'uppercase',marginBottom:'1rem',display:'flex',alignItems:'center',gap:6}}>
-    <span style={{width:6,height:6,background:C.accent,borderRadius:'50%',display:'inline-block'}}/>
-    {text}
-  </div>
+return <div style={{fontSize:10,fontFamily:C.mono,color:C.muted,letterSpacing:'0.12em',
+  textTransform:'uppercase',marginBottom:'1rem',display:'flex',alignItems:'center',gap:6}}>
+  <span style={{width:6,height:6,background:C.accent,borderRadius:'50%',display:'inline-block'}}/>
+  {text}
+</div>
 }
 
 function Card({children, style={}}){
-  return <div style={{background:C.paper,border:`1.5px solid ${C.border}`,borderRadius:4,
-    padding:'1.25rem 1.5rem',animation:'fadeIn 0.3s ease',...style}}>
-    {children}
-  </div>
+return <div style={{background:C.paper,border:`1.5px solid ${C.border}`,borderRadius:4,
+  padding:'1.25rem 1.5rem',animation:'fadeIn 0.3s ease',...style}}>
+  {children}
+</div>
 }
 
 function Badge({label, scheme}){
-  const s = scheme||{color:C.accent,bg:C.accentBg};
-  return <span style={{fontSize:10,fontFamily:C.mono,letterSpacing:'0.1em',textTransform:'uppercase',
-    background:s.bg,color:s.color,border:`1px solid ${s.color}`,padding:'2px 8px',borderRadius:2}}>
-    {label}
-  </span>
+const s = scheme||{color:C.accent,bg:C.accentBg};
+return <span style={{fontSize:10,fontFamily:C.mono,letterSpacing:'0.1em',textTransform:'uppercase',
+  background:s.bg,color:s.color,border:`1px solid ${s.color}`,padding:'2px 8px',borderRadius:2}}>
+  {label}
+</span>
 }
 
 function Bullet({text}){
-  return <li style={{display:'flex',gap:10,alignItems:'flex-start',fontSize:14,lineHeight:1.7,
-    color:C.muted,borderBottom:`1px dashed ${C.border}`,paddingBottom:8,marginBottom:8,listStyle:'none'}}>
-    <span style={{color:C.accent,fontFamily:C.mono,fontSize:12,marginTop:3,flexShrink:0}}>▸</span>
-    <span>{text}</span>
-  </li>
+return <li style={{display:'flex',gap:10,alignItems:'flex-start',fontSize:14,lineHeight:1.7,
+  color:C.muted,borderBottom:`1px dashed ${C.border}`,paddingBottom:8,marginBottom:8,listStyle:'none'}}>
+  <span style={{color:C.accent,fontFamily:C.mono,fontSize:12,marginTop:3,flexShrink:0}}>▸</span>
+  <span>{text}</span>
+</li>
 }
 
 function Step({num, text}){
-  return <div style={{display:'flex',gap:12,alignItems:'flex-start',
-    paddingBottom:12,marginBottom:12,borderBottom:`1px dashed ${C.border}`}}>
-    <div style={{width:24,height:24,borderRadius:'50%',background:C.accent,color:'#fff',
-      fontSize:11,fontFamily:C.mono,fontWeight:700,flexShrink:0,marginTop:2,
-      display:'flex',alignItems:'center',justifyContent:'center'}}>{num}</div>
-    <span style={{fontSize:14,lineHeight:1.7,color:C.muted}}>{text}</span>
-  </div>
+return <div style={{display:'flex',gap:12,alignItems:'flex-start',
+  paddingBottom:12,marginBottom:12,borderBottom:`1px dashed ${C.border}`}}>
+  <div style={{width:24,height:24,borderRadius:'50%',background:C.accent,color:'#fff',
+    fontSize:11,fontFamily:C.mono,fontWeight:700,flexShrink:0,marginTop:2,
+    display:'flex',alignItems:'center',justifyContent:'center'}}>{num}</div>
+  <span style={{fontSize:14,lineHeight:1.7,color:C.muted}}>{text}</span>
+</div>
 }
 
 function Pitfall({text}){
-  return <div style={{display:'flex',gap:10,alignItems:'flex-start',
-    paddingBottom:10,marginBottom:10,borderBottom:`1px dashed ${C.border}`}}>
-    <span style={{flexShrink:0,marginTop:2}}>⚠</span>
-    <span style={{fontSize:14,lineHeight:1.7,color:C.muted}}>{text}</span>
-  </div>
+return <div style={{display:'flex',gap:10,alignItems:'flex-start',
+  paddingBottom:10,marginBottom:10,borderBottom:`1px dashed ${C.border}`}}>
+  <span style={{flexShrink:0,marginTop:2}}>⚠</span>
+  <span style={{fontSize:14,lineHeight:1.7,color:C.muted}}>{text}</span>
+</div>
 }
 
 function Hint({text}){
-  return <div style={{display:'flex',gap:10,alignItems:'flex-start',
-    paddingBottom:10,marginBottom:10,borderBottom:`1px dashed ${C.border}`}}>
-    <span style={{color:C.success,fontFamily:C.mono,fontSize:13,marginTop:2,flexShrink:0}}>✦</span>
-    <span style={{fontSize:14,lineHeight:1.7,color:C.muted}}>{text}</span>
-  </div>
+return <div style={{display:'flex',gap:10,alignItems:'flex-start',
+  paddingBottom:10,marginBottom:10,borderBottom:`1px dashed ${C.border}`}}>
+  <span style={{color:C.success,fontFamily:C.mono,fontSize:13,marginTop:2,flexShrink:0}}>✦</span>
+  <span style={{fontSize:14,lineHeight:1.7,color:C.muted}}>{text}</span>
+</div>
 }
 
 function ComplexBox({label, value, note}){
-  return <div style={{flex:1,border:`1.5px solid ${C.border}`,borderRadius:4,
-    padding:'14px 16px',background:C.paper}}>
-    <div style={{fontSize:10,fontFamily:C.mono,color:C.muted,letterSpacing:'0.1em',marginBottom:4}}>{label}</div>
-    <div style={{fontSize:24,fontFamily:C.mono,color:C.accent,fontWeight:700,marginBottom:note?4:0}}>{value}</div>
-    {note && <div style={{fontSize:11,color:C.muted,fontStyle:'italic'}}>{note}</div>}
-  </div>
+return <div style={{flex:1,border:`1.5px solid ${C.border}`,borderRadius:4,
+  padding:'14px 16px',background:C.paper}}>
+  <div style={{fontSize:10,fontFamily:C.mono,color:C.muted,letterSpacing:'0.1em',marginBottom:4}}>{label}</div>
+  <div style={{fontSize:24,fontFamily:C.mono,color:C.accent,fontWeight:700,marginBottom:note?4:0}}>{value}</div>
+  {note && <div style={{fontSize:11,color:C.muted,fontStyle:'italic'}}>{note}</div>}
+</div>
 }
 
 function PatternTag({tag}){
-  return <span style={{fontSize:12,fontFamily:C.mono,background:C.infoBg,color:C.info,
-    border:`1px solid ${C.info}`,padding:'3px 10px',borderRadius:2}}>{tag}</span>
+return <span style={{fontSize:12,fontFamily:C.mono,background:C.infoBg,color:C.info,
+  border:`1px solid ${C.info}`,padding:'3px 10px',borderRadius:2}}>{tag}</span>
 }
 
 function SimilarRow({name, difficulty}){
-  const d = DIFF[(difficulty||'medium').toLowerCase()]||DIFF.medium;
-  return <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',
-    padding:'8px 0',borderBottom:`1px dashed ${C.border}`}}>
-    <span style={{fontSize:13,color:C.ink}}>{name}</span>
-    <Badge label={difficulty||'medium'} scheme={d}/>
-  </div>
+const d = DIFF[(difficulty||'medium').toLowerCase()]||DIFF.medium;
+return <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',
+  padding:'8px 0',borderBottom:`1px dashed ${C.border}`}}>
+  <span style={{fontSize:13,color:C.ink}}>{name}</span>
+  <Badge label={difficulty||'medium'} scheme={d}/>
+</div>
 }
 
 function CodeBlock({code, onCopy, copied}){
-  return <div style={{border:`1.5px solid ${C.border}`,borderRadius:4,overflow:'hidden',background:'#1e1e1a'}}>
-    <div style={{background:'#2a2a24',padding:'8px 16px',display:'flex',
-      justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid #3a3a32'}}>
-      <span style={{fontSize:10,fontFamily:C.mono,color:'#888',letterSpacing:'0.1em'}}>PYTHON 3 · CORE FUNCTION</span>
-      <button onClick={onCopy} style={{background:'transparent',
-        border:`1px solid ${copied?'#4caf50':'#555'}`,borderRadius:3,
-        color:copied?'#4caf50':'#888',fontFamily:C.mono,fontSize:10,
-        padding:'3px 10px',cursor:'pointer',transition:'all 0.2s'}}>
-        {copied?'✓ copied':'copy'}
-      </button>
-    </div>
-    <pre style={{padding:'1.25rem',overflowX:'auto',margin:0}}>
-      <code style={{fontFamily:C.mono,fontSize:13,color:'#e8e4d4',lineHeight:1.65,whiteSpace:'pre-wrap'}}>{code}</code>
-    </pre>
+return <div style={{border:`1.5px solid ${C.border}`,borderRadius:4,overflow:'hidden',background:'#1e1e1a'}}>
+  <div style={{background:'#2a2a24',padding:'8px 16px',display:'flex',
+    justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid #3a3a32'}}>
+    <span style={{fontSize:10,fontFamily:C.mono,color:'#888',letterSpacing:'0.1em'}}>PYTHON 3 · CORE FUNCTION</span>
+    <button onClick={onCopy} style={{background:'transparent',
+      border:`1px solid ${copied?'#4caf50':'#555'}`,borderRadius:3,
+      color:copied?'#4caf50':'#888',fontFamily:C.mono,fontSize:10,
+      padding:'3px 10px',cursor:'pointer',transition:'all 0.2s'}}>
+      {copied?'✓ copied':'copy'}
+    </button>
   </div>
+  <pre style={{padding:'1.25rem',overflowX:'auto',margin:0}}>
+    <code style={{fontFamily:C.mono,fontSize:13,color:'#e8e4d4',lineHeight:1.65,whiteSpace:'pre-wrap'}}>{code}</code>
+  </pre>
+</div>
 }
 
-// ── main app ─────────────────────────────────────────────────────
+// ── NEW: Modal component ──────────────────────────────────────────
+// This popup appears after 2 free uses.
+// position:fixed means it covers the whole screen on top of everything.
+// zIndex:999 makes sure it's always in front of other elements.
 
-function App(){
-  const [input,   setInput]   = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result,  setResult]  = useState(null);
-  const [error,   setError]   = useState('');
-  const [copied,  setCopied]  = useState(false);
-  const [tab,     setTab]     = useState('breakdown');
-  const codeRef = useRef('');
+function GuestModal({onClose}){
+return (
+  // OUTER: dark overlay covering the whole screen
+  <div style={{
+    position:'fixed', top:0, left:0,
+    width:'100%', height:'100%',
+    background:'rgba(0,0,0,0.55)',
+    display:'flex', alignItems:'center', justifyContent:'center',
+    zIndex:999,
+    padding:'1rem'
+  }}>
+    {/* INNER: white card in the middle */}
+    <div style={{
+      background:C.paper,
+      border:`1.5px solid ${C.border}`,
+      borderRadius:6,
+      padding:'2rem',
+      maxWidth:400,
+      width:'100%',
+      animation:'modalIn 0.2s ease',
+      textAlign:'center'
+    }}>
+      {/* lock icon */}
+      <div style={{fontSize:32, marginBottom:'1rem'}}>🔒</div>
 
-  const arr = v => Array.isArray(v) ? v : v ? [v] : [];
+      {/* title */}
+      <h2 style={{fontSize:20, fontWeight:700, color:C.ink, marginBottom:'0.5rem'}}>
+        You've used your 2 free attempts!
+      </h2>
 
-  async function submit(){
-    if(!input.trim()){setError('paste a problem first bro'); return;}
-    setError(''); setResult(null); setLoading(true); setTab('breakdown');
-    try{
-      const res = await fetch('/api/explain', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({problem: input}),
-      });
-      if(!res.ok){
-        const e = await res.json().catch(()=>({}));
-        throw new Error(e.error || `server error ${res.status}`);
-      }
-      const data = await res.json();
-      codeRef.current = data.solution || '# no solution returned';
-      setResult(data);
-    } catch(e){
-      setError(e.message || 'something broke — try again');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function copyCode(){
-    if(!codeRef.current) return;
-    navigator.clipboard.writeText(codeRef.current).then(()=>{
-      setCopied(true); setTimeout(()=>setCopied(false), 2000);
-    });
-  }
-
-  function clear(){
-    setInput(''); setResult(null); setError(''); codeRef.current='';
-  }
-
-  const diff   = result ? (DIFF[(result.difficulty||'').toLowerCase()]||DIFF.medium) : null;
-  const TABS   = ['breakdown','algorithm','code','interview'];
-
-  return <div style={{maxWidth:660, margin:'0 auto'}}>
-
-    {/* ── header ── */}
-    <div style={{marginBottom:'2rem',borderBottom:`2px solid ${C.ink}`,paddingBottom:'1.5rem'}}>
-      <Badge label="DSA Explainer"/>
-      <h1 style={{fontSize:'clamp(2rem,5vw,2.8rem)',fontWeight:700,color:C.ink,
-        lineHeight:1.05,marginTop:'0.5rem',letterSpacing:'-0.02em'}}>
-        Problem<br/><span style={{color:C.accent}}>Deconstructor.</span>
-      </h1>
-      <p style={{fontSize:13,color:C.muted,marginTop:'0.5rem',fontStyle:'italic'}}>
-        paste any leetcode problem → full breakdown + python solution
+      {/* subtitle */}
+      <p style={{fontSize:13, color:C.muted, marginBottom:'1.5rem', lineHeight:1.6}}>
+        Sign in to get unlimited access,<br/>
+        save problems & track your history.
       </p>
+
+      {/* Google sign in — will be wired to Supabase in Step 3 */}
+      <button
+        onClick={()=> alert('Google login coming soon!')}
+        style={{
+          width:'100%', padding:'12px',
+          background:C.accent, color:'#fff',
+          border:'none', borderRadius:4,
+          fontSize:14, fontFamily:C.mono,
+          cursor:'pointer', marginBottom:'0.75rem',
+          letterSpacing:'0.05em'
+        }}>
+        Continue with Google
+      </button>
+
+      {/* maybe later — closes the modal, but modal will reappear next submit */}
+      <button
+        onClick={onClose}
+        style={{
+          width:'100%', padding:'10px',
+          background:'transparent', color:C.muted,
+          border:`1.5px solid ${C.border}`, borderRadius:4,
+          fontSize:13, fontFamily:C.mono, cursor:'pointer'
+        }}>
+        Maybe later
+      </button>
     </div>
+  </div>
+)
+}
+// ─────────────────────────────────────────────────────────────────
 
-    {/* ── input ── */}
-    <Card style={{marginBottom:'1rem'}}>
-      <textarea value={input} onChange={e=>setInput(e.target.value)}
-        onKeyDown={e=>e.key==='Enter'&&e.ctrlKey&&submit()}
-        placeholder="Paste your LeetCode problem here... (Ctrl+Enter to submit)"
-        rows={5}
-        style={{width:'100%',background:'transparent',border:'none',color:C.ink,
-          fontSize:14,lineHeight:1.7,resize:'vertical',outline:'none',
-          fontFamily:'Georgia,serif'}}/>
-      <div style={{display:'flex',gap:10,marginTop:'0.75rem',paddingTop:'0.75rem',
-        borderTop:`1px dashed ${C.border}`}}>
-        <button onClick={submit} disabled={loading} style={{
-          flex:1,background:loading?C.border:C.accent,
-          color:loading?C.muted:'#fff',border:'none',borderRadius:3,
-          padding:'11px 20px',fontSize:13,fontFamily:C.mono,letterSpacing:'0.05em',
-          cursor:loading?'not-allowed':'pointer',transition:'all 0.15s'}}>
-          {loading ? 'thinking...' : '→ deconstruct'}
-        </button>
-        <button onClick={clear} style={{background:'transparent',
-          border:`1.5px solid ${C.border}`,borderRadius:3,padding:'11px 16px',
-          fontSize:13,color:C.muted,cursor:'pointer',fontFamily:C.mono}}>
-          clear
-        </button>
-      </div>
-    </Card>
+// ── main app ─────────────────────────────────────────────────────
+function App(){
+const [input, setInput] = useState('');
+const [loading, setLoading] = useState(false);
+const [result, setResult] = useState(null);
+const [error, setError] = useState('');
+const [copied, setCopied] = useState(false);
+const [tab, setTab] = useState('breakdown');
 
-    {/* ── error ── */}
-    {error && <div style={{background:C.accentBg,border:`1px solid ${C.accent}`,
-      borderRadius:3,padding:'10px 14px',fontSize:12,fontFamily:C.mono,
-      color:C.accent,marginBottom:'1rem'}}>✗ {error}</div>}
+// NEW: showModal is our true/false switch for the popup
+// false = hidden, true = visible
+const [showModal, setShowModal] = useState(false);
 
-    {/* ── results ── */}
-    {(loading||result) && <div style={{display:'flex',flexDirection:'column',gap:14}}>
+const codeRef = useRef('');
+const arr = v => Array.isArray(v) ? v : v ? [v] : [];
 
-      {/* title + difficulty */}
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
-        borderLeft:`4px solid ${C.accent}`,paddingLeft:12,flexWrap:'wrap',gap:8}}>
-        <div style={{fontSize:'clamp(1.1rem,3vw,1.4rem)',fontWeight:700,color:C.ink}}>
-          {loading ? 'Analyzing...' : result?.title||'Problem'}
-        </div>
-        {!loading && diff && <Badge label={result.difficulty} scheme={diff}/>}
-      </div>
+async function submit(){
+  if(!input.trim()){setError('paste a problem first bro'); return;}
 
-      {/* pattern chips */}
-      {loading && <Skeleton lines={[40,30,50]}/>}
-      {!loading && result?.patterns && (
-        <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
-          <span style={{fontSize:10,fontFamily:C.mono,color:C.muted,
-            letterSpacing:'0.1em',textTransform:'uppercase'}}>patterns →</span>
-          {arr(result.patterns).map((p,i)=><PatternTag key={i} tag={p}/>)}
-        </div>
-      )}
+  // NEW: check attempts BEFORE calling the API
+  // if they've used it 2 or more times, show modal and stop
+  if(getAttempts() >= 2){
+    setShowModal(true); // flip the switch → modal appears
+    return;             // stop here, don't call the API
+  }
 
-      {/* tabs */}
-      <div style={{display:'flex',borderBottom:`1.5px solid ${C.border}`}}>
-        {TABS.map(t=>(
-          <button key={t} onClick={()=>setTab(t)} style={{
-            background:'transparent',border:'none',
-            borderBottom:tab===t?`2px solid ${C.accent}`:'2px solid transparent',
-            padding:'8px 16px',fontSize:12,fontFamily:C.mono,letterSpacing:'0.08em',
-            color:tab===t?C.accent:C.muted,cursor:'pointer',marginBottom:-1.5,
-            transition:'all 0.15s',textTransform:'uppercase'}}>
-            {t}
-          </button>
-        ))}
-      </div>
+  setError(''); setResult(null); setLoading(true); setTab('breakdown');
+  try{
+    const res = await fetch('/api/explain', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({problem: input}),
+    });
+    if(!res.ok){
+      const e = await res.json().catch(()=>({}));
+      throw new Error(e.error || `server error ${res.status}`);
+    }
+    const data = await res.json();
+    codeRef.current = data.solution || '# no solution returned';
+    setResult(data);
 
-      {/* ── tab: breakdown ── */}
-      {tab==='breakdown' && <div style={{display:'flex',flexDirection:'column',gap:14}}>
-        <Card>
-          <Label text="plain english"/>
-          {loading ? <Skeleton/> :
-            <ul style={{padding:0}}>{arr(result?.explanation).map((b,i)=><Bullet key={i} text={b}/>)}</ul>}
-        </Card>
-        <Card>
-          <Label text="how to think about it"/>
-          {loading ? <Skeleton/> :
-            <ul style={{padding:0}}>{arr(result?.approach).map((b,i)=><Bullet key={i} text={b}/>)}</ul>}
-        </Card>
-        <div style={{display:'flex',gap:12}}>
-          <ComplexBox label="TIME COMPLEXITY"
-            value={loading?'...':(result?.time||'O(?)')}
-            note={!loading&&result?.timeNote}/>
-          <ComplexBox label="SPACE COMPLEXITY"
-            value={loading?'...':(result?.space||'O(?)')}
-            note={!loading&&result?.spaceNote}/>
-        </div>
-      </div>}
+    // NEW: save attempt only on success
+    // failed calls don't count against the user
+    saveAttempt();
 
-      {/* ── tab: algorithm ── */}
-      {tab==='algorithm' && <div style={{display:'flex',flexDirection:'column',gap:14}}>
-        <Card>
-          <Label text="step-by-step algorithm"/>
-          {loading ? <Skeleton/> :
-            arr(result?.steps).map((s,i)=><Step key={i} num={i+1} text={s}/>)}
-        </Card>
-        <Card>
-          <Label text="common pitfalls"/>
-          {loading ? <Skeleton/> :
-            arr(result?.pitfalls).map((p,i)=><Pitfall key={i} text={p}/>)}
-        </Card>
-      </div>}
+  } catch(e){
+    setError(e.message || 'something broke — try again');
+  } finally {
+    setLoading(false);
+  }
+}
 
-      {/* ── tab: code ── */}
-      {tab==='code' && <Card>
-        <Label text="core function only — python 3"/>
-        {loading
-          ? <Skeleton lines={[100,80,90,70,85]}/>
-          : <CodeBlock code={codeRef.current} onCopy={copyCode} copied={copied}/>}
-      </Card>}
+function copyCode(){
+  if(!codeRef.current) return;
+  navigator.clipboard.writeText(codeRef.current).then(()=>{
+    setCopied(true); setTimeout(()=>setCopied(false), 2000);
+  });
+}
 
-      {/* ── tab: interview ── */}
-      {tab==='interview' && <div style={{display:'flex',flexDirection:'column',gap:14}}>
-        <Card>
-          <Label text="interview tips & tricks"/>
-          {loading ? <Skeleton/> :
-            arr(result?.hints).map((h,i)=><Hint key={i} text={h}/>)}
-        </Card>
-        <Card>
-          <Label text="similar problems to practice"/>
-          {loading ? <Skeleton/> :
-            arr(result?.similar).map((s,i)=>
-              <SimilarRow key={i} name={s.name||s} difficulty={s.difficulty}/>)}
-        </Card>
-      </div>}
+function clear(){
+  setInput(''); setResult(null); setError(''); codeRef.current='';
+}
 
-    </div>}
+const diff = result ? (DIFF[(result.difficulty||'').toLowerCase()]||DIFF.medium) : null;
+const TABS = ['breakdown','algorithm','code','interview'];
 
-    <p style={{marginTop:'3rem',fontSize:11,fontFamily:C.mono,
-      color:C.border,textAlign:'center'}}>
-      sigmasensei × dsa tools
+return <div style={{maxWidth:660, margin:'0 auto'}}>
+
+  {/* NEW: show the modal when showModal is true */}
+  {/* the && means: only render GuestModal IF showModal === true */}
+  {showModal && <GuestModal onClose={()=> setShowModal(false)}/>}
+
+  {/* ── header ── */}
+  <div style={{marginBottom:'2rem',borderBottom:`2px solid ${C.ink}`,paddingBottom:'1.5rem'}}>
+    <Badge label="DSA Explainer"/>
+    <h1 style={{fontSize:'clamp(2rem,5vw,2.8rem)',fontWeight:700,color:C.ink,
+      lineHeight:1.05,marginTop:'0.5rem',letterSpacing:'-0.02em'}}>
+      Problem<br/><span style={{color:C.accent}}>Deconstructor.</span>
+    </h1>
+    <p style={{fontSize:13,color:C.muted,marginTop:'0.5rem',fontStyle:'italic'}}>
+      paste any leetcode problem → full breakdown + python solution
     </p>
   </div>
+
+  {/* NEW: show remaining attempts counter to the user */}
+  <div style={{
+    fontSize:11, fontFamily:C.mono, color:C.muted,
+    marginBottom:'1rem', textAlign:'right'
+  }}>
+    {/* Math.max stops it from showing negative numbers */}
+    {Math.max(2 - getAttempts(), 0)} free attempts remaining
+  </div>
+
+  {/* ── input ── */}
+  <Card style={{marginBottom:'1rem'}}>
+    <textarea value={input} onChange={e=>setInput(e.target.value)}
+      onKeyDown={e=>e.key==='Enter'&&e.ctrlKey&&submit()}
+      placeholder="Paste your LeetCode problem here... (Ctrl+Enter to submit)"
+      rows={5}
+      style={{width:'100%',background:'transparent',border:'none',color:C.ink,
+        fontSize:14,lineHeight:1.7,resize:'vertical',outline:'none',
+        fontFamily:'Georgia,serif'}}/>
+    <div style={{display:'flex',gap:10,marginTop:'0.75rem',paddingTop:'0.75rem',
+      borderTop:`1px dashed ${C.border}`}}>
+      <button onClick={submit} disabled={loading} style={{
+        flex:1,background:loading?C.border:C.accent,
+        color:loading?C.muted:'#fff',border:'none',borderRadius:3,
+        padding:'11px 20px',fontSize:13,fontFamily:C.mono,letterSpacing:'0.05em',
+        cursor:loading?'not-allowed':'pointer',transition:'all 0.15s'}}>
+        {loading ? 'thinking...' : '→ deconstruct'}
+      </button>
+      <button onClick={clear} style={{background:'transparent',
+        border:`1.5px solid ${C.border}`,borderRadius:3,padding:'11px 16px',
+        fontSize:13,color:C.muted,cursor:'pointer',fontFamily:C.mono}}>
+        clear
+      </button>
+    </div>
+  </Card>
+
+  {/* ── error ── */}
+  {error && <div style={{background:C.accentBg,border:`1px solid ${C.accent}`,
+    borderRadius:3,padding:'10px 14px',fontSize:12,fontFamily:C.mono,
+    color:C.accent,marginBottom:'1rem'}}>✗ {error}</div>}
+
+  {/* ── results ── */}
+  {(loading||result) && <div style={{display:'flex',flexDirection:'column',gap:14}}>
+
+    {/* title + difficulty */}
+    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+      borderLeft:`4px solid ${C.accent}`,paddingLeft:12,flexWrap:'wrap',gap:8}}>
+      <div style={{fontSize:'clamp(1.1rem,3vw,1.4rem)',fontWeight:700,color:C.ink}}>
+        {loading ? 'Analyzing...' : result?.title||'Problem'}
+      </div>
+      {!loading && diff && <Badge label={result.difficulty} scheme={diff}/>}
+    </div>
+
+    {/* pattern chips */}
+    {loading && <Skeleton lines={[40,30,50]}/>}
+    {!loading && result?.patterns && (
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+        <span style={{fontSize:10,fontFamily:C.mono,color:C.muted,
+          letterSpacing:'0.1em',textTransform:'uppercase'}}>patterns →</span>
+        {arr(result.patterns).map((p,i)=><PatternTag key={i} tag={p}/>)}
+      </div>
+    )}
+
+    {/* tabs */}
+    <div style={{display:'flex',borderBottom:`1.5px solid ${C.border}`}}>
+      {TABS.map(t=>(
+        <button key={t} onClick={()=>setTab(t)} style={{
+          background:'transparent',border:'none',
+          borderBottom:tab===t?`2px solid ${C.accent}`:'2px solid transparent',
+          padding:'8px 16px',fontSize:12,fontFamily:C.mono,letterSpacing:'0.08em',
+          color:tab===t?C.accent:C.muted,cursor:'pointer',marginBottom:-1.5,
+          transition:'all 0.15s',textTransform:'uppercase'}}>
+          {t}
+        </button>
+      ))}
+    </div>
+
+    {/* ── tab: breakdown ── */}
+    {tab==='breakdown' && <div style={{display:'flex',flexDirection:'column',gap:14}}>
+      <Card>
+        <Label text="plain english"/>
+        {loading ? <Skeleton/> :
+          <ul style={{padding:0}}>{arr(result?.explanation).map((b,i)=><Bullet key={i} text={b}/>)}</ul>}
+      </Card>
+      <Card>
+        <Label text="how to think about it"/>
+        {loading ? <Skeleton/> :
+          <ul style={{padding:0}}>{arr(result?.approach).map((b,i)=><Bullet key={i} text={b}/>)}</ul>}
+      </Card>
+      <div style={{display:'flex',gap:12}}>
+        <ComplexBox label="TIME COMPLEXITY"
+          value={loading?'...':(result?.time||'O(?)')}
+          note={!loading&&result?.timeNote}/>
+        <ComplexBox label="SPACE COMPLEXITY"
+          value={loading?'...':(result?.space||'O(?)')}
+          note={!loading&&result?.spaceNote}/>
+      </div>
+    </div>}
+
+    {/* ── tab: algorithm ── */}
+    {tab==='algorithm' && <div style={{display:'flex',flexDirection:'column',gap:14}}>
+      <Card>
+        <Label text="step-by-step algorithm"/>
+        {loading ? <Skeleton/> :
+          arr(result?.steps).map((s,i)=><Step key={i} num={i+1} text={s}/>)}
+      </Card>
+      <Card>
+        <Label text="common pitfalls"/>
+        {loading ? <Skeleton/> :
+          arr(result?.pitfalls).map((p,i)=><Pitfall key={i} text={p}/>)}
+      </Card>
+    </div>}
+
+    {/* ── tab: code ── */}
+    {tab==='code' && <Card>
+      <Label text="core function only — python 3"/>
+      {loading
+        ? <Skeleton lines={[100,80,90,70,85]}/>
+        : <CodeBlock code={codeRef.current} onCopy={copyCode} copied={copied}/>}
+    </Card>}
+
+    {/* ── tab: interview ── */}
+    {tab==='interview' && <div style={{display:'flex',flexDirection:'column',gap:14}}>
+      <Card>
+        <Label text="interview tips & tricks"/>
+        {loading ? <Skeleton/> :
+          arr(result?.hints).map((h,i)=><Hint key={i} text={h}/>)}
+      </Card>
+      <Card>
+        <Label text="similar problems to practice"/>
+        {loading ? <Skeleton/> :
+          arr(result?.similar).map((s,i)=>
+            <SimilarRow key={i} name={s.name||s} difficulty={s.difficulty}/>)}
+      </Card>
+    </div>}
+
+  </div>}
+
+  <p style={{marginTop:'3rem',fontSize:11,fontFamily:C.mono,
+    color:C.border,textAlign:'center'}}>
+    sigmasensei × dsa tools
+  </p>
+</div>
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
