@@ -7,20 +7,24 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<!-- NEW: Supabase library — this is what talks to your Supabase project -->
+<!-- Just like how you loaded React above, we load Supabase the same way -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:#f5f2eb;font-family:'Georgia',serif;min-height:100vh;padding:2rem 1rem}
 input,textarea,button{font-family:inherit}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-/* NEW: smooth popup animation */
 @keyframes modalIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const {useState, useRef} = React;
+const {useState, useRef, useEffect} = React;
 
 const C = {
 bg:'#f5f2eb', paper:'#fffef9', ink:'#1a1a18', muted:'#5a5a52',
@@ -35,17 +39,19 @@ medium:{color:'#8a6200', bg:'#fdf6e3'},
 hard: {color:'#c84b2f', bg:'#f7eeeb'},
 };
 
-// ── NEW: guest attempt helpers ────────────────────────────────────
-// Think of localStorage like a notebook in the user's browser.
-// We write how many times they've used the app, and read it back next time.
+// ── NEW: Supabase setup ───────────────────────────────────────────
+// We create one supabase "client" that handles all communication
+// with your Supabase project. Think of it like opening a phone line.
+const supabase = window.supabase.createClient(
+  'https://naqbuxsdqpfmcacigcst.supabase.co',  // your project URL
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hcWJ1eHNkcXBmbWNhY2lnY3N0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4MzgyOTksImV4cCI6MjA5NDQxNDI5OX0.dSF93pAMV_wZr4uk0hYe5LnKaaaTnfRrwTZ8Gsoh-QE'  // your anon key
+);
+// ─────────────────────────────────────────────────────────────────
 
-// READ: open the notebook and check the number
+// ── guest attempt helpers (same as before) ────────────────────────
 function getAttempts(){
   return parseInt(localStorage.getItem('dsa_attempts') || '0');
-  // if nothing is written yet, treat it as 0
 }
-
-// WRITE: after a successful use, add 1 to the count
 function saveAttempt(){
   localStorage.setItem('dsa_attempts', getAttempts() + 1);
 }
@@ -158,75 +164,85 @@ return <div style={{border:`1.5px solid ${C.border}`,borderRadius:4,overflow:'hi
 </div>
 }
 
-// ── NEW: Modal component ──────────────────────────────────────────
-// This popup appears after 2 free uses.
-// position:fixed means it covers the whole screen on top of everything.
-// zIndex:999 makes sure it's always in front of other elements.
+// ── NEW: Updated Modal with real Google login ─────────────────────
+// When user clicks "Continue with Google":
+// 1. We call supabase.auth.signInWithOAuth
+// 2. Supabase opens Google's login page
+// 3. User logs in with their Google account
+// 4. Google sends them back to your app, now logged in!
+// That's the entire login flow — 3 lines of code does all of it!
 
-function GuestModal({onClose}){
-return (
-  // OUTER: dark overlay covering the whole screen
-  <div style={{
-    position:'fixed', top:0, left:0,
-    width:'100%', height:'100%',
-    background:'rgba(0,0,0,0.55)',
-    display:'flex', alignItems:'center', justifyContent:'center',
-    zIndex:999,
-    padding:'1rem'
-  }}>
-    {/* INNER: white card in the middle */}
+function GuestModal({onClose, onLogin}){
+
+  // This function runs when user clicks "Continue with Google"
+  async function handleGoogleLogin(){
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        // after login, send user back to your app
+        redirectTo: window.location.origin
+      }
+    });
+    if(error) alert('Login failed: ' + error.message);
+  }
+
+  return (
     <div style={{
-      background:C.paper,
-      border:`1.5px solid ${C.border}`,
-      borderRadius:6,
-      padding:'2rem',
-      maxWidth:400,
-      width:'100%',
-      animation:'modalIn 0.2s ease',
-      textAlign:'center'
+      position:'fixed', top:0, left:0,
+      width:'100%', height:'100%',
+      background:'rgba(0,0,0,0.55)',
+      display:'flex', alignItems:'center', justifyContent:'center',
+      zIndex:999,
+      padding:'1rem'
     }}>
-      {/* lock icon */}
-      <div style={{fontSize:32, marginBottom:'1rem'}}>🔒</div>
+      <div style={{
+        background:C.paper,
+        border:`1.5px solid ${C.border}`,
+        borderRadius:6,
+        padding:'2rem',
+        maxWidth:400,
+        width:'100%',
+        animation:'modalIn 0.2s ease',
+        textAlign:'center'
+      }}>
+        <div style={{fontSize:32, marginBottom:'1rem'}}>🔒</div>
 
-      {/* title */}
-      <h2 style={{fontSize:20, fontWeight:700, color:C.ink, marginBottom:'0.5rem'}}>
-        You've used your 2 free attempts!
-      </h2>
+        <h2 style={{fontSize:20, fontWeight:700, color:C.ink, marginBottom:'0.5rem'}}>
+          You've used your 2 free attempts!
+        </h2>
 
-      {/* subtitle */}
-      <p style={{fontSize:13, color:C.muted, marginBottom:'1.5rem', lineHeight:1.6}}>
-        Sign in to get unlimited access,<br/>
-        save problems & track your history.
-      </p>
+        <p style={{fontSize:13, color:C.muted, marginBottom:'1.5rem', lineHeight:1.6}}>
+          Sign in to get unlimited access,<br/>
+          save problems & track your history.
+        </p>
 
-      {/* Google sign in — will be wired to Supabase in Step 3 */}
-      <button
-        onClick={()=> alert('Google login coming soon!')}
-        style={{
-          width:'100%', padding:'12px',
-          background:C.accent, color:'#fff',
-          border:'none', borderRadius:4,
-          fontSize:14, fontFamily:C.mono,
-          cursor:'pointer', marginBottom:'0.75rem',
-          letterSpacing:'0.05em'
-        }}>
-        Continue with Google
-      </button>
+        {/* NOW REAL: clicking this opens Google login */}
+        <button
+          onClick={handleGoogleLogin}
+          style={{
+            width:'100%', padding:'12px',
+            background:C.accent, color:'#fff',
+            border:'none', borderRadius:4,
+            fontSize:14, fontFamily:C.mono,
+            cursor:'pointer', marginBottom:'0.75rem',
+            letterSpacing:'0.05em'
+          }}>
+          Continue with Google
+        </button>
 
-      {/* maybe later — closes the modal, but modal will reappear next submit */}
-      <button
-        onClick={onClose}
-        style={{
-          width:'100%', padding:'10px',
-          background:'transparent', color:C.muted,
-          border:`1.5px solid ${C.border}`, borderRadius:4,
-          fontSize:13, fontFamily:C.mono, cursor:'pointer'
-        }}>
-        Maybe later
-      </button>
+        <button
+          onClick={onClose}
+          style={{
+            width:'100%', padding:'10px',
+            background:'transparent', color:C.muted,
+            border:`1.5px solid ${C.border}`, borderRadius:4,
+            fontSize:13, fontFamily:C.mono, cursor:'pointer'
+          }}>
+          Maybe later
+        </button>
+      </div>
     </div>
-  </div>
-)
+  )
 }
 // ─────────────────────────────────────────────────────────────────
 
@@ -238,22 +254,58 @@ const [result, setResult] = useState(null);
 const [error, setError] = useState('');
 const [copied, setCopied] = useState(false);
 const [tab, setTab] = useState('breakdown');
-
-// NEW: showModal is our true/false switch for the popup
-// false = hidden, true = visible
 const [showModal, setShowModal] = useState(false);
+
+// NEW: user state — null means not logged in, object means logged in
+// This is the "who is currently using the app" variable
+const [user, setUser] = useState(null);
 
 const codeRef = useRef('');
 const arr = v => Array.isArray(v) ? v : v ? [v] : [];
 
+// NEW: useEffect runs once when the app loads
+// It checks if the user is already logged in (from a previous session)
+// and listens for login/logout events
+useEffect(()=>{
+
+  // check if already logged in when app loads
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    // session?.user means: if session exists, get the user from it
+    setUser(session?.user ?? null);
+    // if they just logged in via Google, clear their attempt count
+    // so logged in users get unlimited access
+    if(session?.user){
+      localStorage.removeItem('dsa_attempts');
+    }
+  });
+
+  // listen for login/logout changes in real time
+  // when user logs in → onAuthStateChange fires → we update user state
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    setUser(session?.user ?? null);
+    if(session?.user){
+      setShowModal(false); // close the modal when they log in
+      localStorage.removeItem('dsa_attempts'); // reset attempt count
+    }
+  });
+
+  // cleanup: stop listening when app unmounts
+  return () => subscription.unsubscribe();
+}, []); // the [] means "only run this once on first load"
+
+// NEW: logout function
+async function handleLogout(){
+  await supabase.auth.signOut();
+  setUser(null);
+}
+
 async function submit(){
   if(!input.trim()){setError('paste a problem first bro'); return;}
 
-  // NEW: check attempts BEFORE calling the API
-  // if they've used it 2 or more times, show modal and stop
-  if(getAttempts() >= 2){
-    setShowModal(true); // flip the switch → modal appears
-    return;             // stop here, don't call the API
+  // if not logged in, check attempts
+  if(!user && getAttempts() >= 2){
+    setShowModal(true);
+    return;
   }
 
   setError(''); setResult(null); setLoading(true); setTab('breakdown');
@@ -271,9 +323,8 @@ async function submit(){
     codeRef.current = data.solution || '# no solution returned';
     setResult(data);
 
-    // NEW: save attempt only on success
-    // failed calls don't count against the user
-    saveAttempt();
+    // only count attempts for guest users
+    if(!user) saveAttempt();
 
   } catch(e){
     setError(e.message || 'something broke — try again');
@@ -298,13 +349,36 @@ const TABS = ['breakdown','algorithm','code','interview'];
 
 return <div style={{maxWidth:660, margin:'0 auto'}}>
 
-  {/* NEW: show the modal when showModal is true */}
-  {/* the && means: only render GuestModal IF showModal === true */}
   {showModal && <GuestModal onClose={()=> setShowModal(false)}/>}
 
   {/* ── header ── */}
   <div style={{marginBottom:'2rem',borderBottom:`2px solid ${C.ink}`,paddingBottom:'1.5rem'}}>
-    <Badge label="DSA Explainer"/>
+    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+      <Badge label="DSA Explainer"/>
+
+      {/* NEW: show user info if logged in, nothing if guest */}
+      {user ? (
+        // logged in: show their email + logout button
+        <div style={{display:'flex', alignItems:'center', gap:10}}>
+          <span style={{fontSize:11, fontFamily:C.mono, color:C.muted}}>
+            {user.email}
+          </span>
+          <button onClick={handleLogout} style={{
+            background:'transparent', border:`1px solid ${C.border}`,
+            borderRadius:3, padding:'3px 10px', fontSize:11,
+            fontFamily:C.mono, color:C.muted, cursor:'pointer'
+          }}>
+            logout
+          </button>
+        </div>
+      ) : (
+        // guest: show remaining attempts
+        <span style={{fontSize:11, fontFamily:C.mono, color:C.muted}}>
+          {Math.max(2 - getAttempts(), 0)} free attempts remaining
+        </span>
+      )}
+    </div>
+
     <h1 style={{fontSize:'clamp(2rem,5vw,2.8rem)',fontWeight:700,color:C.ink,
       lineHeight:1.05,marginTop:'0.5rem',letterSpacing:'-0.02em'}}>
       Problem<br/><span style={{color:C.accent}}>Deconstructor.</span>
@@ -312,15 +386,6 @@ return <div style={{maxWidth:660, margin:'0 auto'}}>
     <p style={{fontSize:13,color:C.muted,marginTop:'0.5rem',fontStyle:'italic'}}>
       paste any leetcode problem → full breakdown + python solution
     </p>
-  </div>
-
-  {/* NEW: show remaining attempts counter to the user */}
-  <div style={{
-    fontSize:11, fontFamily:C.mono, color:C.muted,
-    marginBottom:'1rem', textAlign:'right'
-  }}>
-    {/* Math.max stops it from showing negative numbers */}
-    {Math.max(2 - getAttempts(), 0)} free attempts remaining
   </div>
 
   {/* ── input ── */}
@@ -357,7 +422,6 @@ return <div style={{maxWidth:660, margin:'0 auto'}}>
   {/* ── results ── */}
   {(loading||result) && <div style={{display:'flex',flexDirection:'column',gap:14}}>
 
-    {/* title + difficulty */}
     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
       borderLeft:`4px solid ${C.accent}`,paddingLeft:12,flexWrap:'wrap',gap:8}}>
       <div style={{fontSize:'clamp(1.1rem,3vw,1.4rem)',fontWeight:700,color:C.ink}}>
@@ -366,7 +430,6 @@ return <div style={{maxWidth:660, margin:'0 auto'}}>
       {!loading && diff && <Badge label={result.difficulty} scheme={diff}/>}
     </div>
 
-    {/* pattern chips */}
     {loading && <Skeleton lines={[40,30,50]}/>}
     {!loading && result?.patterns && (
       <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
@@ -376,7 +439,6 @@ return <div style={{maxWidth:660, margin:'0 auto'}}>
       </div>
     )}
 
-    {/* tabs */}
     <div style={{display:'flex',borderBottom:`1.5px solid ${C.border}`}}>
       {TABS.map(t=>(
         <button key={t} onClick={()=>setTab(t)} style={{
@@ -390,7 +452,6 @@ return <div style={{maxWidth:660, margin:'0 auto'}}>
       ))}
     </div>
 
-    {/* ── tab: breakdown ── */}
     {tab==='breakdown' && <div style={{display:'flex',flexDirection:'column',gap:14}}>
       <Card>
         <Label text="plain english"/>
@@ -412,7 +473,6 @@ return <div style={{maxWidth:660, margin:'0 auto'}}>
       </div>
     </div>}
 
-    {/* ── tab: algorithm ── */}
     {tab==='algorithm' && <div style={{display:'flex',flexDirection:'column',gap:14}}>
       <Card>
         <Label text="step-by-step algorithm"/>
@@ -426,7 +486,6 @@ return <div style={{maxWidth:660, margin:'0 auto'}}>
       </Card>
     </div>}
 
-    {/* ── tab: code ── */}
     {tab==='code' && <Card>
       <Label text="core function only — python 3"/>
       {loading
@@ -434,7 +493,6 @@ return <div style={{maxWidth:660, margin:'0 auto'}}>
         : <CodeBlock code={codeRef.current} onCopy={copyCode} copied={copied}/>}
     </Card>}
 
-    {/* ── tab: interview ── */}
     {tab==='interview' && <div style={{display:'flex',flexDirection:'column',gap:14}}>
       <Card>
         <Label text="interview tips & tricks"/>
