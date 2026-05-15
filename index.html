@@ -1,213 +1,346 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>DSA Explainer // Core Python Logic</title>
-<link href="googleapis.com" rel="stylesheet" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA Explainer // SigmaSensei</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: #07070a; --surface: #0f0f15; --surface2: #161622;
-    --border: rgba(255,255,255,0.06); --border-hover: rgba(255,255,255,0.12);
-    --text: #f3f3f6; --muted: #7e7e8c;
-    --accent: #635bff; --accent-light: #8a84ff; --success: #00ffaa; --warn: #ffb800;
-    --mono: 'Space Mono', monospace; --sans: 'Syne', sans-serif;
-  }
-  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; padding: 3rem 1.5rem; line-height: 1.5; }
-  .noise { position: fixed; inset: 0; pointer-events: none; z-index: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='w3.org id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E"); }
-  .wrapper { max-width: 680px; margin: 0 auto; position: relative; z-index: 1; }
-  
-  header { text-align: left; margin-bottom: 2.5rem; }
-  .tag { font-family: var(--mono); font-size: 10px; color: var(--accent-light); letter-spacing: 0.15em; text-transform: uppercase; font-weight: 700; margin-bottom: 0.5rem; display: block; }
-  h1 { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
-  h1 span { color: var(--accent-light); }
-
-  .input-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
-  textarea { width: 100%; min-height: 120px; background: #0a0a0f; border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: var(--mono); font-size: 13px; padding: 1rem; resize: vertical; transition: all 0.2s ease; outline: none; }
-  textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.15); }
-  
-  .controls { display: flex; gap: 12px; margin-top: 1rem; }
-  .btn { font-family: var(--sans); font-weight: 700; border-radius: 10px; padding: 12px 24px; cursor: pointer; transition: all 0.15s ease; border: none; font-size: 14px; }
-  .btn-prime { background: var(--accent); color: #fff; flex: 1; }
-  .btn-prime:hover { background: var(--accent-light); transform: translateY(-1px); }
-  .btn-prime:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-  .btn-sec { background: transparent; color: var(--muted); border: 1px solid var(--border); }
-  .btn-sec:hover { border-color: var(--border-hover); color: var(--text); }
-
-  .error { background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.2); color: #ff8e8e; border-radius: 10px; padding: 12px; font-family: var(--mono); font-size: 12px; margin-bottom: 1.5rem; display: none; }
-  
-  .results-panel { display: none; flex-direction: column; gap: 16px; }
-  
-  /* Large Title Display Styling */
-  .problem-heading { font-size: 24px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; margin-top: 0.5rem; padding-left: 4px; border-left: 4px solid var(--accent-light); padding-left: 12px; }
-
-  .ui-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; position: relative; }
-  .ui-card-title { font-size: 11px; font-family: var(--mono); font-weight: 700; color: var(--muted); letter-spacing: 0.1em; margin-bottom: 1rem; display: flex; align-items: center; gap: 6px; }
-  .ui-card-title::before { content: ''; width: 6px; height: 6px; background: var(--accent-light); border-radius: 50%; }
-  
-  .metrics { display: flex; gap: 16px; }
-  .metric-box { flex: 1; background: var(--surface2); border-radius: 12px; padding: 1rem; border: 1px solid var(--border); }
-  .metric-label { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
-  .metric-value { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--warn); }
-  
-  .bullet-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-  .bullet-list li { position: relative; padding-left: 20px; font-size: 14px; color: #d1d1d6; line-height: 1.6; }
-  .bullet-list li::before { content: "→"; position: absolute; left: 0; color: var(--accent-light); font-family: var(--mono); }
-  
-  .code-viewer { background: #060609; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; margin-top: 0.5rem; }
-  .code-header { background: #0c0c12; padding: 8px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-  .code-lang { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; }
-  .copy-btn { background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-family: var(--mono); font-size: 10px; padding: 4px 8px; cursor: pointer; transition: all 0.2s; }
-  .copy-btn:hover { color: #fff; border-color: var(--border-hover); }
-  .copy-btn.copied { color: var(--success); border-color: var(--success); }
-  pre { padding: 1rem; overflow-x: auto; margin: 0; }
-  code { font-family: var(--mono); font-size: 13px; color: #e5e5ea; line-height: 1.6; white-space: pre-wrap; }
-
-  .skeleton-stack { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-  .skeleton { height: 14px; background: linear-gradient(90deg, var(--surface2) 25%, #222230 50%, var(--surface2) 75%); background-size: 200% 100%; animation: loadingShift 1.4s infinite; border-radius: 4px; }
-  @keyframes loadingShift { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#f5f2eb;font-family:'Georgia',serif;min-height:100vh;padding:2rem 1rem}
+input,textarea,button{font-family:inherit}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 </style>
 </head>
 <body>
-<div class="noise"></div>
-<div class="wrapper">
-  <header>
-    <span class="tag">// Interactive Compiler Deconstruct</span>
-    <h1>Logic over <span>Boilerplate</span></h1>
-  </header>
+<div id="root"></div>
+<script type="text/babel">
+const {useState, useRef} = React;
 
-  <div class="input-panel">
-    <textarea id="rawInput" placeholder="Paste your LeetCode problem description here..."></textarea>
-    <div class="controls">
-      <button class="btn btn-prime" id="actionBtn" onclick="processProblem()">Deconstruct Core Logic</button>
-      <button class="btn btn-sec" onclick="clearWorkspace()">Clear</button>
-    </div>
+const C = {
+  bg:'#f5f2eb', paper:'#fffef9', ink:'#1a1a18', muted:'#5a5a52',
+  accent:'#c84b2f', accentBg:'#f7eeeb', border:'#d4d0c4',
+  success:'#2d6a4f', info:'#1a4a7a', infoBg:'#e8f0fa',
+  mono:"'Courier New', monospace",
+};
+
+const DIFF = {
+  easy:  {color:'#2d6a4f', bg:'#eaf4ee'},
+  medium:{color:'#8a6200', bg:'#fdf6e3'},
+  hard:  {color:'#c84b2f', bg:'#f7eeeb'},
+};
+
+// ── tiny components ──────────────────────────────────────────────
+
+function Skeleton({lines=[90,70,80]}){
+  return <div style={{display:'flex',flexDirection:'column',gap:8}}>
+    {lines.map((w,i)=><div key={i} style={{height:12,width:`${w}%`,borderRadius:2,
+      background:'linear-gradient(90deg,#e8e4d4 25%,#f0ece0 50%,#e8e4d4 75%)',
+      backgroundSize:'200% 100%',animation:'shimmer 1.4s infinite'}}/>)}
   </div>
+}
 
-  <div class="error" id="errContainer"></div>
-
-  <div class="results-panel" id="viewGroup">
-    <!-- Large Title Display Component -->
-    <div class="problem-heading" id="titleTarget"></div>
-
-    <div class="ui-card">
-      <div class="ui-card-title">PLAIN ENGLISH TRANSLATION</div>
-      <ul class="bullet-list" id="expTarget"></ul>
-    </div>
-
-    <div class="ui-card">
-      <div class="ui-card-title">STRATEGIC APPROACH CLUES</div>
-      <ul class="bullet-list" id="appTarget"></ul>
-    </div>
-
-    <div class="metrics">
-      <div class="metric-box">
-        <div class="metric-label">TIME COMPLEXITY</div>
-        <div class="metric-value" id="timeTarget">-</div>
-      </div>
-      <div class="metric-box">
-        <div class="metric-label">SPACE COMPLEXITY</div>
-        <div class="metric-value" id="spaceTarget">-</div>
-      </div>
-    </div>
-
-    <div class="ui-card">
-      <div class="ui-card-title">LEETCODE CORE FUNCTION ONLY</div>
-      <div class="code-viewer">
-        <div class="code-header">
-          <span class="code-lang">Python 3 Core</span>
-          <button class="copy-btn" id="copyBtn" onclick="copyCode()">Copy Logic</button>
-        </div>
-        <pre><code id="codeTarget"></code></pre>
-      </div>
-    </div>
+function Label({text}){
+  return <div style={{fontSize:10,fontFamily:C.mono,color:C.muted,letterSpacing:'0.12em',
+    textTransform:'uppercase',marginBottom:'1rem',display:'flex',alignItems:'center',gap:6}}>
+    <span style={{width:6,height:6,background:C.accent,borderRadius:'50%',display:'inline-block'}}/>
+    {text}
   </div>
-</div>
+}
 
-<script>
-  let targetedCodeText = "";
+function Card({children, style={}}){
+  return <div style={{background:C.paper,border:`1.5px solid ${C.border}`,borderRadius:4,
+    padding:'1.25rem 1.5rem',animation:'fadeIn 0.3s ease',...style}}>
+    {children}
+  </div>
+}
 
-  function getSkeleton(count = 3) {
-    return `<div class="skeleton-stack">${Array(count).fill('<div class="skeleton"></div>').join('')}</div>`;
-  }
+function Badge({label, scheme}){
+  const s = scheme||{color:C.accent,bg:C.accentBg};
+  return <span style={{fontSize:10,fontFamily:C.mono,letterSpacing:'0.1em',textTransform:'uppercase',
+    background:s.bg,color:s.color,border:`1px solid ${s.color}`,padding:'2px 8px',borderRadius:2}}>
+    {label}
+  </span>
+}
 
-  function formatAsBullets(data) {
-    if (!data) return "<li>N/A</li>";
-    if (Array.isArray(data)) {
-      return data.map(item => `<li>${item}</li>`).join('');
-    }
-    return `<li>${data.toString().replace(/^-\s*/, '')}</li>`;
-  }
+function Bullet({text}){
+  return <li style={{display:'flex',gap:10,alignItems:'flex-start',fontSize:14,lineHeight:1.7,
+    color:C.muted,borderBottom:`1px dashed ${C.border}`,paddingBottom:8,marginBottom:8,listStyle:'none'}}>
+    <span style={{color:C.accent,fontFamily:C.mono,fontSize:12,marginTop:3,flexShrink:0}}>▸</span>
+    <span>{text}</span>
+  </li>
+}
 
-  async function processProblem() {
-    const rawText = document.getElementById('rawInput').value.trim();
-    const errBox = document.getElementById('errContainer');
-    const viewGroup = document.getElementById('viewGroup');
-    const actionBtn = document.getElementById('actionBtn');
+function Step({num, text}){
+  return <div style={{display:'flex',gap:12,alignItems:'flex-start',
+    paddingBottom:12,marginBottom:12,borderBottom:`1px dashed ${C.border}`}}>
+    <div style={{width:24,height:24,borderRadius:'50%',background:C.accent,color:'#fff',
+      fontSize:11,fontFamily:C.mono,fontWeight:700,flexShrink:0,marginTop:2,
+      display:'flex',alignItems:'center',justifyContent:'center'}}>{num}</div>
+    <span style={{fontSize:14,lineHeight:1.7,color:C.muted}}>{text}</span>
+  </div>
+}
 
-    errBox.style.display = 'none';
-    if (!rawText) {
-      errBox.textContent = "Error: Input box empty. Please copy and paste a problem description.";
-      errBox.style.display = 'block';
-      return;
-    }
+function Pitfall({text}){
+  return <div style={{display:'flex',gap:10,alignItems:'flex-start',
+    paddingBottom:10,marginBottom:10,borderBottom:`1px dashed ${C.border}`}}>
+    <span style={{flexShrink:0,marginTop:2}}>⚠</span>
+    <span style={{fontSize:14,lineHeight:1.7,color:C.muted}}>{text}</span>
+  </div>
+}
 
-    viewGroup.style.display = 'flex';
-    document.getElementById('titleTarget').textContent = "Analyzing LeetCode Matrix...";
-    document.getElementById('expTarget').innerHTML = getSkeleton(3);
-    document.getElementById('appTarget').innerHTML = getSkeleton(2);
-    document.getElementById('timeTarget').innerHTML = "...";
-    document.getElementById('spaceTarget').innerHTML = "...";
-    document.getElementById('codeTarget').textContent = "# Executing token tracking maps...";
-    
-    actionBtn.disabled = true;
-    const copyBtn = document.getElementById('copyBtn');
-    copyBtn.className = "copy-btn";
-    copyBtn.textContent = "Copy Logic";
+function Hint({text}){
+  return <div style={{display:'flex',gap:10,alignItems:'flex-start',
+    paddingBottom:10,marginBottom:10,borderBottom:`1px dashed ${C.border}`}}>
+    <span style={{color:C.success,fontFamily:C.mono,fontSize:13,marginTop:2,flexShrink:0}}>✦</span>
+    <span style={{fontSize:14,lineHeight:1.7,color:C.muted}}>{text}</span>
+  </div>
+}
 
-    try {
-      const apiResponse = await fetch('/api/explain', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ problem: rawText })
+function ComplexBox({label, value, note}){
+  return <div style={{flex:1,border:`1.5px solid ${C.border}`,borderRadius:4,
+    padding:'14px 16px',background:C.paper}}>
+    <div style={{fontSize:10,fontFamily:C.mono,color:C.muted,letterSpacing:'0.1em',marginBottom:4}}>{label}</div>
+    <div style={{fontSize:24,fontFamily:C.mono,color:C.accent,fontWeight:700,marginBottom:note?4:0}}>{value}</div>
+    {note && <div style={{fontSize:11,color:C.muted,fontStyle:'italic'}}>{note}</div>}
+  </div>
+}
+
+function PatternTag({tag}){
+  return <span style={{fontSize:12,fontFamily:C.mono,background:C.infoBg,color:C.info,
+    border:`1px solid ${C.info}`,padding:'3px 10px',borderRadius:2}}>{tag}</span>
+}
+
+function SimilarRow({name, difficulty}){
+  const d = DIFF[(difficulty||'medium').toLowerCase()]||DIFF.medium;
+  return <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',
+    padding:'8px 0',borderBottom:`1px dashed ${C.border}`}}>
+    <span style={{fontSize:13,color:C.ink}}>{name}</span>
+    <Badge label={difficulty||'medium'} scheme={d}/>
+  </div>
+}
+
+function CodeBlock({code, onCopy, copied}){
+  return <div style={{border:`1.5px solid ${C.border}`,borderRadius:4,overflow:'hidden',background:'#1e1e1a'}}>
+    <div style={{background:'#2a2a24',padding:'8px 16px',display:'flex',
+      justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid #3a3a32'}}>
+      <span style={{fontSize:10,fontFamily:C.mono,color:'#888',letterSpacing:'0.1em'}}>PYTHON 3 · CORE FUNCTION</span>
+      <button onClick={onCopy} style={{background:'transparent',
+        border:`1px solid ${copied?'#4caf50':'#555'}`,borderRadius:3,
+        color:copied?'#4caf50':'#888',fontFamily:C.mono,fontSize:10,
+        padding:'3px 10px',cursor:'pointer',transition:'all 0.2s'}}>
+        {copied?'✓ copied':'copy'}
+      </button>
+    </div>
+    <pre style={{padding:'1.25rem',overflowX:'auto',margin:0}}>
+      <code style={{fontFamily:C.mono,fontSize:13,color:'#e8e4d4',lineHeight:1.65,whiteSpace:'pre-wrap'}}>{code}</code>
+    </pre>
+  </div>
+}
+
+// ── main app ─────────────────────────────────────────────────────
+
+function App(){
+  const [input,   setInput]   = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result,  setResult]  = useState(null);
+  const [error,   setError]   = useState('');
+  const [copied,  setCopied]  = useState(false);
+  const [tab,     setTab]     = useState('breakdown');
+  const codeRef = useRef('');
+
+  const arr = v => Array.isArray(v) ? v : v ? [v] : [];
+
+  async function submit(){
+    if(!input.trim()){setError('paste a problem first bro'); return;}
+    setError(''); setResult(null); setLoading(true); setTab('breakdown');
+    try{
+      const res = await fetch('/api/explain', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({problem: input}),
       });
-
-      if (!apiResponse.ok) throw new Error("Server returned an bad response code.");
-      const payload = await apiResponse.json();
-
-      document.getElementById('titleTarget').textContent = payload.title || "LeetCode Problem Extraction";
-      document.getElementById('expTarget').innerHTML = formatAsBullets(payload.explanation);
-      document.getElementById('appTarget').innerHTML = formatAsBullets(payload.approach);
-      document.getElementById('timeTarget').textContent = payload.time || "O(N)";
-      document.getElementById('spaceTarget').textContent = payload.space || "O(1)";
-      
-      targetedCodeText = payload.solution || "# No code logic returned.";
-      document.getElementById('codeTarget').textContent = targetedCodeText;
-
-    } catch (err) {
-      errBox.textContent = "Execution Error: The backend responded but data mapping fields broke. Try another prompt.";
-      errBox.style.display = 'block';
+      if(!res.ok){
+        const e = await res.json().catch(()=>({}));
+        throw new Error(e.error || `server error ${res.status}`);
+      }
+      const data = await res.json();
+      codeRef.current = data.solution || '# no solution returned';
+      setResult(data);
+    } catch(e){
+      setError(e.message || 'something broke — try again');
     } finally {
-      actionBtn.disabled = false;
+      setLoading(false);
     }
   }
 
-  function copyCode() {
-    if (!targetedCodeText) return;
-    navigator.clipboard.writeText(targetedCodeText).then(() => {
-      const copyBtn = document.getElementById('copyBtn');
-      copyBtn.className = "copy-btn copied";
-      copyBtn.textContent = "✓ Copied Code";
+  function copyCode(){
+    if(!codeRef.current) return;
+    navigator.clipboard.writeText(codeRef.current).then(()=>{
+      setCopied(true); setTimeout(()=>setCopied(false), 2000);
     });
   }
 
-  function clearWorkspace() {
-    document.getElementById('rawInput').value = '';
-    document.getElementById('viewGroup').style.display = 'none';
-    document.getElementById('errContainer').style.display = 'none';
-    targetedCodeText = "";
+  function clear(){
+    setInput(''); setResult(null); setError(''); codeRef.current='';
   }
+
+  const diff   = result ? (DIFF[(result.difficulty||'').toLowerCase()]||DIFF.medium) : null;
+  const TABS   = ['breakdown','algorithm','code','interview'];
+
+  return <div style={{maxWidth:660, margin:'0 auto'}}>
+
+    {/* ── header ── */}
+    <div style={{marginBottom:'2rem',borderBottom:`2px solid ${C.ink}`,paddingBottom:'1.5rem'}}>
+      <Badge label="DSA Explainer"/>
+      <h1 style={{fontSize:'clamp(2rem,5vw,2.8rem)',fontWeight:700,color:C.ink,
+        lineHeight:1.05,marginTop:'0.5rem',letterSpacing:'-0.02em'}}>
+        Problem<br/><span style={{color:C.accent}}>Deconstructor.</span>
+      </h1>
+      <p style={{fontSize:13,color:C.muted,marginTop:'0.5rem',fontStyle:'italic'}}>
+        paste any leetcode problem → full breakdown + python solution
+      </p>
+    </div>
+
+    {/* ── input ── */}
+    <Card style={{marginBottom:'1rem'}}>
+      <textarea value={input} onChange={e=>setInput(e.target.value)}
+        onKeyDown={e=>e.key==='Enter'&&e.ctrlKey&&submit()}
+        placeholder="Paste your LeetCode problem here... (Ctrl+Enter to submit)"
+        rows={5}
+        style={{width:'100%',background:'transparent',border:'none',color:C.ink,
+          fontSize:14,lineHeight:1.7,resize:'vertical',outline:'none',
+          fontFamily:'Georgia,serif'}}/>
+      <div style={{display:'flex',gap:10,marginTop:'0.75rem',paddingTop:'0.75rem',
+        borderTop:`1px dashed ${C.border}`}}>
+        <button onClick={submit} disabled={loading} style={{
+          flex:1,background:loading?C.border:C.accent,
+          color:loading?C.muted:'#fff',border:'none',borderRadius:3,
+          padding:'11px 20px',fontSize:13,fontFamily:C.mono,letterSpacing:'0.05em',
+          cursor:loading?'not-allowed':'pointer',transition:'all 0.15s'}}>
+          {loading ? 'thinking...' : '→ deconstruct'}
+        </button>
+        <button onClick={clear} style={{background:'transparent',
+          border:`1.5px solid ${C.border}`,borderRadius:3,padding:'11px 16px',
+          fontSize:13,color:C.muted,cursor:'pointer',fontFamily:C.mono}}>
+          clear
+        </button>
+      </div>
+    </Card>
+
+    {/* ── error ── */}
+    {error && <div style={{background:C.accentBg,border:`1px solid ${C.accent}`,
+      borderRadius:3,padding:'10px 14px',fontSize:12,fontFamily:C.mono,
+      color:C.accent,marginBottom:'1rem'}}>✗ {error}</div>}
+
+    {/* ── results ── */}
+    {(loading||result) && <div style={{display:'flex',flexDirection:'column',gap:14}}>
+
+      {/* title + difficulty */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+        borderLeft:`4px solid ${C.accent}`,paddingLeft:12,flexWrap:'wrap',gap:8}}>
+        <div style={{fontSize:'clamp(1.1rem,3vw,1.4rem)',fontWeight:700,color:C.ink}}>
+          {loading ? 'Analyzing...' : result?.title||'Problem'}
+        </div>
+        {!loading && diff && <Badge label={result.difficulty} scheme={diff}/>}
+      </div>
+
+      {/* pattern chips */}
+      {loading && <Skeleton lines={[40,30,50]}/>}
+      {!loading && result?.patterns && (
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+          <span style={{fontSize:10,fontFamily:C.mono,color:C.muted,
+            letterSpacing:'0.1em',textTransform:'uppercase'}}>patterns →</span>
+          {arr(result.patterns).map((p,i)=><PatternTag key={i} tag={p}/>)}
+        </div>
+      )}
+
+      {/* tabs */}
+      <div style={{display:'flex',borderBottom:`1.5px solid ${C.border}`}}>
+        {TABS.map(t=>(
+          <button key={t} onClick={()=>setTab(t)} style={{
+            background:'transparent',border:'none',
+            borderBottom:tab===t?`2px solid ${C.accent}`:'2px solid transparent',
+            padding:'8px 16px',fontSize:12,fontFamily:C.mono,letterSpacing:'0.08em',
+            color:tab===t?C.accent:C.muted,cursor:'pointer',marginBottom:-1.5,
+            transition:'all 0.15s',textTransform:'uppercase'}}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* ── tab: breakdown ── */}
+      {tab==='breakdown' && <div style={{display:'flex',flexDirection:'column',gap:14}}>
+        <Card>
+          <Label text="plain english"/>
+          {loading ? <Skeleton/> :
+            <ul style={{padding:0}}>{arr(result?.explanation).map((b,i)=><Bullet key={i} text={b}/>)}</ul>}
+        </Card>
+        <Card>
+          <Label text="how to think about it"/>
+          {loading ? <Skeleton/> :
+            <ul style={{padding:0}}>{arr(result?.approach).map((b,i)=><Bullet key={i} text={b}/>)}</ul>}
+        </Card>
+        <div style={{display:'flex',gap:12}}>
+          <ComplexBox label="TIME COMPLEXITY"
+            value={loading?'...':(result?.time||'O(?)')}
+            note={!loading&&result?.timeNote}/>
+          <ComplexBox label="SPACE COMPLEXITY"
+            value={loading?'...':(result?.space||'O(?)')}
+            note={!loading&&result?.spaceNote}/>
+        </div>
+      </div>}
+
+      {/* ── tab: algorithm ── */}
+      {tab==='algorithm' && <div style={{display:'flex',flexDirection:'column',gap:14}}>
+        <Card>
+          <Label text="step-by-step algorithm"/>
+          {loading ? <Skeleton/> :
+            arr(result?.steps).map((s,i)=><Step key={i} num={i+1} text={s}/>)}
+        </Card>
+        <Card>
+          <Label text="common pitfalls"/>
+          {loading ? <Skeleton/> :
+            arr(result?.pitfalls).map((p,i)=><Pitfall key={i} text={p}/>)}
+        </Card>
+      </div>}
+
+      {/* ── tab: code ── */}
+      {tab==='code' && <Card>
+        <Label text="core function only — python 3"/>
+        {loading
+          ? <Skeleton lines={[100,80,90,70,85]}/>
+          : <CodeBlock code={codeRef.current} onCopy={copyCode} copied={copied}/>}
+      </Card>}
+
+      {/* ── tab: interview ── */}
+      {tab==='interview' && <div style={{display:'flex',flexDirection:'column',gap:14}}>
+        <Card>
+          <Label text="interview tips & tricks"/>
+          {loading ? <Skeleton/> :
+            arr(result?.hints).map((h,i)=><Hint key={i} text={h}/>)}
+        </Card>
+        <Card>
+          <Label text="similar problems to practice"/>
+          {loading ? <Skeleton/> :
+            arr(result?.similar).map((s,i)=>
+              <SimilarRow key={i} name={s.name||s} difficulty={s.difficulty}/>)}
+        </Card>
+      </div>}
+
+    </div>}
+
+    <p style={{marginTop:'3rem',fontSize:11,fontFamily:C.mono,
+      color:C.border,textAlign:'center'}}>
+      sigmasensei × dsa tools
+    </p>
+  </div>
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
 </html>
