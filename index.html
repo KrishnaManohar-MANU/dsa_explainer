@@ -8,8 +8,7 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-<!-- NEW: Supabase library — this is what talks to your Supabase project -->
-<!-- Just like how you loaded React above, we load Supabase the same way -->
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
@@ -39,25 +38,19 @@ medium:{color:'#8a6200', bg:'#fdf6e3'},
 hard: {color:'#c84b2f', bg:'#f7eeeb'},
 };
 
-// ── NEW: Supabase setup ───────────────────────────────────────────
-// We create one supabase "client" that handles all communication
-// with your Supabase project. Think of it like opening a phone line.
+
 const supabase = window.supabase.createClient(
-  'https://naqbuxsdqpfmcacigcst.supabase.co',  // your project URL
+  'https://naqbuxsdqpfmcacigcst.supabase.co',  
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hcWJ1eHNkcXBmbWNhY2lnY3N0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4MzgyOTksImV4cCI6MjA5NDQxNDI5OX0.dSF93pAMV_wZr4uk0hYe5LnKaaaTnfRrwTZ8Gsoh-QE'  // your anon key
 );
-// ─────────────────────────────────────────────────────────────────
 
-// ── guest attempt helpers (same as before) ────────────────────────
 function getAttempts(){
   return parseInt(localStorage.getItem('dsa_attempts') || '0');
 }
 function saveAttempt(){
   localStorage.setItem('dsa_attempts', getAttempts() + 1);
 }
-// ─────────────────────────────────────────────────────────────────
 
-// ── tiny components ──────────────────────────────────────────────
 function Skeleton({lines=[90,70,80]}){
 return <div style={{display:'flex',flexDirection:'column',gap:8}}>
   {lines.map((w,i)=><div key={i} style={{height:12,width:`${w}%`,borderRadius:2,
@@ -164,22 +157,16 @@ return <div style={{border:`1.5px solid ${C.border}`,borderRadius:4,overflow:'hi
 </div>
 }
 
-// ── NEW: Updated Modal with real Google login ─────────────────────
-// When user clicks "Continue with Google":
-// 1. We call supabase.auth.signInWithOAuth
-// 2. Supabase opens Google's login page
-// 3. User logs in with their Google account
-// 4. Google sends them back to your app, now logged in!
-// That's the entire login flow — 3 lines of code does all of it!
+
 
 function GuestModal({onClose, onLogin}){
 
-  // This function runs when user clicks "Continue with Google"
+ 
   async function handleGoogleLogin(){
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // after login, send user back to your app
+       
         redirectTo: window.location.origin
       }
     });
@@ -216,7 +203,7 @@ function GuestModal({onClose, onLogin}){
           save problems & track your history.
         </p>
 
-        {/* NOW REAL: clicking this opens Google login */}
+        
         <button
           onClick={handleGoogleLogin}
           style={{
@@ -244,9 +231,7 @@ function GuestModal({onClose, onLogin}){
     </div>
   )
 }
-// ─────────────────────────────────────────────────────────────────
 
-// ── main app ─────────────────────────────────────────────────────
 function App(){
 const [input, setInput] = useState('');
 const [loading, setLoading] = useState(false);
@@ -256,44 +241,39 @@ const [copied, setCopied] = useState(false);
 const [tab, setTab] = useState('breakdown');
 const [showModal, setShowModal] = useState(false);
 
-// NEW: user state — null means not logged in, object means logged in
-// This is the "who is currently using the app" variable
+
 const [user, setUser] = useState(null);
 
 const codeRef = useRef('');
 const arr = v => Array.isArray(v) ? v : v ? [v] : [];
 
-// NEW: useEffect runs once when the app loads
-// It checks if the user is already logged in (from a previous session)
-// and listens for login/logout events
+
 useEffect(()=>{
 
-  // check if already logged in when app loads
+ 
   supabase.auth.getSession().then(({ data: { session } }) => {
-    // session?.user means: if session exists, get the user from it
+    
     setUser(session?.user ?? null);
-    // if they just logged in via Google, clear their attempt count
-    // so logged in users get unlimited access
+   
     if(session?.user){
       localStorage.removeItem('dsa_attempts');
     }
   });
 
-  // listen for login/logout changes in real time
-  // when user logs in → onAuthStateChange fires → we update user state
+  
   const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
     setUser(session?.user ?? null);
     if(session?.user){
-      setShowModal(false); // close the modal when they log in
-      localStorage.removeItem('dsa_attempts'); // reset attempt count
+      setShowModal(false);
+      localStorage.removeItem('dsa_attempts'); 
     }
   });
 
-  // cleanup: stop listening when app unmounts
+  
   return () => subscription.unsubscribe();
-}, []); // the [] means "only run this once on first load"
+}, []); 
 
-// NEW: logout function
+
 async function handleLogout(){
   await supabase.auth.signOut();
   setUser(null);
@@ -302,7 +282,7 @@ async function handleLogout(){
 async function submit(){
   if(!input.trim()){setError('paste a problem first bro'); return;}
 
-  // if not logged in, check attempts
+  
   if(!user && getAttempts() >= 2){
     setShowModal(true);
     return;
@@ -323,7 +303,7 @@ async function submit(){
     codeRef.current = data.solution || '# no solution returned';
     setResult(data);
 
-    // only count attempts for guest users
+    
     if(!user) saveAttempt();
 
   } catch(e){
@@ -351,14 +331,14 @@ return <div style={{maxWidth:660, margin:'0 auto'}}>
 
   {showModal && <GuestModal onClose={()=> setShowModal(false)}/>}
 
-  {/* ── header ── */}
+  
   <div style={{marginBottom:'2rem',borderBottom:`2px solid ${C.ink}`,paddingBottom:'1.5rem'}}>
     <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
       <Badge label="DSA Explainer"/>
 
-      {/* NEW: show user info if logged in, nothing if guest */}
+      
       {user ? (
-        // logged in: show their email + logout button
+        
         <div style={{display:'flex', alignItems:'center', gap:10}}>
           <span style={{fontSize:11, fontFamily:C.mono, color:C.muted}}>
             {user.email}
@@ -372,7 +352,7 @@ return <div style={{maxWidth:660, margin:'0 auto'}}>
           </button>
         </div>
       ) : (
-        // guest: show remaining attempts
+        
         <span style={{fontSize:11, fontFamily:C.mono, color:C.muted}}>
           {Math.max(2 - getAttempts(), 0)} free attempts remaining
         </span>
@@ -388,7 +368,7 @@ return <div style={{maxWidth:660, margin:'0 auto'}}>
     </p>
   </div>
 
-  {/* ── input ── */}
+
   <Card style={{marginBottom:'1rem'}}>
     <textarea value={input} onChange={e=>setInput(e.target.value)}
       onKeyDown={e=>e.key==='Enter'&&e.ctrlKey&&submit()}
@@ -414,12 +394,11 @@ return <div style={{maxWidth:660, margin:'0 auto'}}>
     </div>
   </Card>
 
-  {/* ── error ── */}
+  
   {error && <div style={{background:C.accentBg,border:`1px solid ${C.accent}`,
     borderRadius:3,padding:'10px 14px',fontSize:12,fontFamily:C.mono,
     color:C.accent,marginBottom:'1rem'}}>✗ {error}</div>}
 
-  {/* ── results ── */}
   {(loading||result) && <div style={{display:'flex',flexDirection:'column',gap:14}}>
 
     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
