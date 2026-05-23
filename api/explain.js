@@ -61,7 +61,7 @@ export default async function handler(req, res) {
     const completion = await apiResponse.json();
     let resultText = completion.choices[0].message.content.trim();
 
-    // strip markdown fences if model ignores response_format
+    
     resultText = resultText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
 
     const structuredData = JSON.parse(resultText);
